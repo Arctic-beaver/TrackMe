@@ -6,6 +6,8 @@
 **Следующий этап:** Этап 3 — Week и Month  
 **План продолжения:** [ROADMAP.md](./ROADMAP.md)
 
+**Список доработок:** [IMPROVEMENTS.md](./IMPROVEMENTS.md)
+
 ## Результат
 
 Этап 2 превращает Today из foundation-макета в рабочий local-first таск-трекер.
