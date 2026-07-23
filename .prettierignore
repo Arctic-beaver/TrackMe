@@ -1,0 +1,10 @@
+Yinkie
+node_modules
+out
+dist
+.test-out
+coverage
+package-lock.json
+build/icons/**/*.ico
+build/icons/**/*.icns
+build/icons/**/*.png

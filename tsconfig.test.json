@@ -1,0 +1,14 @@
+{
+	"compilerOptions": {
+		"target": "ES2022",
+		"module": "CommonJS",
+		"moduleResolution": "Node",
+		"rootDir": "src",
+		"outDir": ".test-out",
+		"strict": true,
+		"esModuleInterop": true,
+		"skipLibCheck": true,
+		"types": ["node"]
+	},
+	"include": ["src/main/**/*.test.ts", "src/renderer/**/*.test.ts", "src/shared/**/*.test.ts"]
+}

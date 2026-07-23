@@ -1,0 +1,11 @@
+/Yinkie/
+/node_modules/
+/out/
+/dist/
+/.test-out/
+/coverage/
+/.vite/
+/release/
+/.eslintcache
+*.log
+.DS_Store

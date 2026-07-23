@@ -1,0 +1,40 @@
+appId: com.trackme.desktop
+productName: TrackMe
+directories:
+    buildResources: build
+asar: true
+afterPack: scripts/apply-electron-fuses.mjs
+files:
+    - '!**/.test-out/**'
+    - '!**/.vscode/**'
+    - '!Yinkie/**'
+    - '!coverage/**'
+    - '!docs/**'
+    - '!src/**'
+    - '!scripts/*.test.mjs'
+    - '!electron.vite.config.{js,ts,mjs,cjs}'
+    - '!{.eslintcache,eslint.config.mjs,.prettierignore,.prettierrc.yaml,CONTRIBUTING.md,README.md}'
+    - '!{.env,.env.*,.npmrc,pnpm-lock.yaml}'
+    - '!{tsconfig.json,tsconfig.node.json,tsconfig.web.json,tsconfig.test.json}'
+win:
+    executableName: TrackMe
+nsis:
+    artifactName: ${productName}-${version}-Setup.${ext}
+    oneClick: false
+    perMachine: false
+    allowElevation: true
+    allowToChangeInstallationDirectory: true
+    createDesktopShortcut: true
+    createStartMenuShortcut: true
+    runAfterFinish: true
+mac:
+    category: public.app-category.productivity
+    notarize: false
+dmg:
+    artifactName: ${productName}-${version}.${ext}
+linux:
+    target:
+        - AppImage
+    maintainer: TrackMe
+    category: Utility
+npmRebuild: false
