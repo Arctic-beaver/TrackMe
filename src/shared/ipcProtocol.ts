@@ -1,14 +1,27 @@
 import {
 	isColorScheme,
 	isInterfaceLocale,
+	isTaskStartMode,
+	isTaskStatus,
 	isThemeFamily,
 	type Appearance,
 	type ApplicationSettings,
+	type ChangeTaskStatusCommand,
 	type DesktopPlatform,
 	type InterfaceLocale,
+	type Project,
+	type ProjectDraft,
 	type StartupState,
+	type Tag,
+	type Task,
+	type TaskBoardSnapshot,
+	type TaskDraft,
+	type TaskRevisionCommand,
+	type UpdateProjectCommand,
+	type UpdateTaskCommand,
 	type WindowState
 } from './contracts'
+import { isLocalDate } from './taskDomain'
 
 export const ipcProtocolVersion = 1 as const
 
@@ -18,6 +31,7 @@ export type IpcErrorCode =
 	| 'STORAGE_BUSY'
 	| 'STORAGE_CORRUPT'
 	| 'MIGRATION_FAILED'
+	| 'REVISION_CONFLICT'
 	| 'UNTRUSTED_SENDER'
 	| 'WINDOW_UNAVAILABLE'
 
@@ -51,6 +65,7 @@ const errorCodes = new Set<IpcErrorCode>([
 	'STORAGE_BUSY',
 	'STORAGE_CORRUPT',
 	'MIGRATION_FAILED',
+	'REVISION_CONFLICT',
 	'UNTRUSTED_SENDER',
 	'WINDOW_UNAVAILABLE'
 ])
@@ -85,6 +100,41 @@ function parseBoolean(value: unknown, label: string): boolean {
 		throw new IpcContractError(`${label} is invalid.`)
 	}
 	return value
+}
+
+function parseString(value: unknown, label: string, maximumLength = 20_000): string {
+	if (typeof value !== 'string' || value.length > maximumLength) {
+		throw new IpcContractError(`${label} is invalid.`)
+	}
+	return value
+}
+
+function parseId(value: unknown, label = 'Identifier'): string {
+	const id = parseString(value, label, 128)
+	if (id.length === 0) throw new IpcContractError(`${label} is invalid.`)
+	return id
+}
+
+function parseNullableString(value: unknown, label: string): string | null {
+	return value === null ? null : parseString(value, label)
+}
+
+function parsePositiveInteger(value: unknown, label: string): number {
+	const parsed = parseSafeInteger(value, label)
+	if (parsed < 1) throw new IpcContractError(`${label} is invalid.`)
+	return parsed
+}
+
+function parseLocalDate(value: unknown, label: string): string {
+	if (!isLocalDate(value)) throw new IpcContractError(`${label} is invalid.`)
+	return value
+}
+
+function parseStringArray(value: unknown, label: string): readonly string[] {
+	if (!Array.isArray(value) || value.length > 200) {
+		throw new IpcContractError(`${label} is invalid.`)
+	}
+	return Object.freeze(value.map((item) => parseString(item, label, 80)))
 }
 
 export class IpcContractError extends Error {
@@ -185,5 +235,154 @@ export function parseStartupState(value: unknown): StartupState {
 		platform: parseDesktopPlatform(value.platform),
 		windowMaximized: parseBoolean(value.windowMaximized, 'Window state'),
 		schemaVersion: parseSafeInteger(value.schemaVersion, 'Schema version')
+	})
+}
+
+export function parseTaskDraft(value: unknown): TaskDraft {
+	if (!isRecord(value) || !isTaskStatus(value.status) || !isTaskStartMode(value.startMode)) {
+		throw new IpcContractError('Task draft is invalid.')
+	}
+	return Object.freeze({
+		title: parseString(value.title, 'Task title', 240),
+		description: parseString(value.description, 'Task description'),
+		status: value.status,
+		estimateDays: parsePositiveInteger(value.estimateDays, 'Task estimate'),
+		dueDate: parseLocalDate(value.dueDate, 'Task deadline'),
+		startMode: value.startMode,
+		preferredStartDate:
+			value.preferredStartDate === null
+				? null
+				: parseLocalDate(value.preferredStartDate, 'Task preferred start'),
+		projectId: value.projectId === null ? null : parseId(value.projectId, 'Project identifier'),
+		tagNames: parseStringArray(value.tagNames, 'Task tags'),
+		localDate: parseLocalDate(value.localDate, 'Current local date')
+	})
+}
+
+export function parseUpdateTaskCommand(value: unknown): UpdateTaskCommand {
+	if (!isRecord(value)) throw new IpcContractError('Task update is invalid.')
+	return Object.freeze({
+		...parseTaskDraft(value),
+		id: parseId(value.id, 'Task identifier'),
+		expectedRevision: parsePositiveInteger(value.expectedRevision, 'Task revision')
+	})
+}
+
+export function parseChangeTaskStatusCommand(value: unknown): ChangeTaskStatusCommand {
+	if (!isRecord(value) || !isTaskStatus(value.status)) {
+		throw new IpcContractError('Task status change is invalid.')
+	}
+	return Object.freeze({
+		id: parseId(value.id, 'Task identifier'),
+		expectedRevision: parsePositiveInteger(value.expectedRevision, 'Task revision'),
+		status: value.status,
+		localDate: parseLocalDate(value.localDate, 'Current local date')
+	})
+}
+
+export function parseTaskRevisionCommand(value: unknown): TaskRevisionCommand {
+	if (!isRecord(value)) throw new IpcContractError('Task revision command is invalid.')
+	return Object.freeze({
+		id: parseId(value.id, 'Task identifier'),
+		expectedRevision: parsePositiveInteger(value.expectedRevision, 'Task revision'),
+		localDate: parseLocalDate(value.localDate, 'Current local date')
+	})
+}
+
+export function parseProjectDraft(value: unknown): ProjectDraft {
+	if (!isRecord(value)) throw new IpcContractError('Project draft is invalid.')
+	return Object.freeze({
+		name: parseString(value.name, 'Project name', 160),
+		description: parseString(value.description, 'Project description')
+	})
+}
+
+export function parseUpdateProjectCommand(value: unknown): UpdateProjectCommand {
+	if (!isRecord(value)) throw new IpcContractError('Project update is invalid.')
+	return Object.freeze({
+		...parseProjectDraft(value),
+		id: parseId(value.id, 'Project identifier'),
+		expectedRevision: parsePositiveInteger(value.expectedRevision, 'Project revision')
+	})
+}
+
+export function parseTaskId(value: unknown): string {
+	return parseId(value, 'Task identifier')
+}
+
+export function parseBoardDate(value: unknown): string {
+	return parseLocalDate(value, 'Board local date')
+}
+
+export function parseTag(value: unknown): Tag {
+	if (!isRecord(value)) throw new IpcContractError('Tag is invalid.')
+	return Object.freeze({
+		id: parseId(value.id, 'Tag identifier'),
+		name: parseString(value.name, 'Tag name', 80),
+		createdAt: parseString(value.createdAt, 'Tag creation time', 64)
+	})
+}
+
+export function parseProject(value: unknown): Project {
+	if (!isRecord(value)) throw new IpcContractError('Project is invalid.')
+	return Object.freeze({
+		id: parseId(value.id, 'Project identifier'),
+		name: parseString(value.name, 'Project name', 160),
+		description: parseString(value.description, 'Project description'),
+		revision: parsePositiveInteger(value.revision, 'Project revision'),
+		createdAt: parseString(value.createdAt, 'Project creation time', 64),
+		updatedAt: parseString(value.updatedAt, 'Project update time', 64),
+		completedTaskCount: parseSafeInteger(value.completedTaskCount, 'Completed task count'),
+		totalTaskCount: parseSafeInteger(value.totalTaskCount, 'Total task count')
+	})
+}
+
+export function parseTask(value: unknown): Task {
+	if (
+		!isRecord(value) ||
+		!isTaskStatus(value.status) ||
+		!isTaskStartMode(value.startMode) ||
+		!Array.isArray(value.tags)
+	) {
+		throw new IpcContractError('Task is invalid.')
+	}
+	return Object.freeze({
+		id: parseId(value.id, 'Task identifier'),
+		title: parseString(value.title, 'Task title', 240),
+		description: parseString(value.description, 'Task description'),
+		status: value.status,
+		estimateDays: parsePositiveInteger(value.estimateDays, 'Task estimate'),
+		dueDate: parseLocalDate(value.dueDate, 'Task deadline'),
+		preferredStartDate: parseLocalDate(value.preferredStartDate, 'Task preferred start'),
+		startMode: value.startMode,
+		plannedForDate:
+			value.plannedForDate === null
+				? null
+				: parseLocalDate(value.plannedForDate, 'Task planned date'),
+		projectId: value.projectId === null ? null : parseId(value.projectId, 'Project identifier'),
+		tags: Object.freeze(value.tags.map(parseTag)),
+		archivedAt: parseNullableString(value.archivedAt, 'Task archive time'),
+		completedAt: parseNullableString(value.completedAt, 'Task completion time'),
+		revision: parsePositiveInteger(value.revision, 'Task revision'),
+		createdAt: parseString(value.createdAt, 'Task creation time', 64),
+		updatedAt: parseString(value.updatedAt, 'Task update time', 64)
+	})
+}
+
+export function parseTaskBoardSnapshot(value: unknown): TaskBoardSnapshot {
+	if (
+		!isRecord(value) ||
+		!Array.isArray(value.tasks) ||
+		!Array.isArray(value.archivedTasks) ||
+		!Array.isArray(value.projects) ||
+		!Array.isArray(value.tags)
+	) {
+		throw new IpcContractError('Task board is invalid.')
+	}
+	return Object.freeze({
+		tasks: Object.freeze(value.tasks.map(parseTask)),
+		archivedTasks: Object.freeze(value.archivedTasks.map(parseTask)),
+		projects: Object.freeze(value.projects.map(parseProject)),
+		tags: Object.freeze(value.tags.map(parseTag))
 	})
 }

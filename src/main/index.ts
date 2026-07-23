@@ -13,6 +13,7 @@ import { registerAppProtocol, registerAppScheme } from './appProtocol'
 import { createApplicationMenuTemplate } from './applicationMenu'
 import { openTrackMeDatabase, type TrackMeDatabase } from './database/database'
 import { SettingsRepository } from './database/settingsRepository'
+import { TaskRepository } from './database/taskRepository'
 import { registerIpcHandlers } from './ipc'
 
 const packagedSmokeTest = process.argv.includes('--trackme-packaged-smoke-test')
@@ -26,6 +27,7 @@ if (smokeUserDataArgument !== undefined) {
 let mainWindow: BrowserWindow | null = null
 let database: TrackMeDatabase | null = null
 let settingsRepository: SettingsRepository | null = null
+let taskRepository: TaskRepository | null = null
 let disposeIpc: (() => void) | null = null
 let disposeProtocol: (() => void) | null = null
 let activeSettings = createDefaultApplicationSettings()
@@ -120,6 +122,7 @@ async function startApplication(): Promise<void> {
 	app.setAppUserModelId('com.trackme.desktop')
 	database = await openTrackMeDatabase(join(app.getPath('userData'), 'trackme.sqlite3'))
 	settingsRepository = new SettingsRepository(database)
+	taskRepository = new TaskRepository(database)
 	applySettings(settingsRepository.get())
 	disposeProtocol = registerAppProtocol(join(__dirname, '../renderer'))
 	disposeIpc = registerIpcHandlers({
@@ -131,6 +134,7 @@ async function startApplication(): Promise<void> {
 			schemaVersion: database?.schemaVersion ?? 0
 		}),
 		settings: settingsRepository,
+		tasks: taskRepository,
 		onSettingsChanged: applySettings,
 		onRendererReady: (window) => {
 			if (packagedSmokeTest) {
@@ -176,6 +180,7 @@ if (!hasSingleInstanceLock) {
 		database?.close()
 		database = null
 		settingsRepository = null
+		taskRepository = null
 	})
 
 	app.on('window-all-closed', () => {

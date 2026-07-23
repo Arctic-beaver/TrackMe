@@ -4,10 +4,21 @@ import {
 	createIpcRequest,
 	parseApplicationSettings,
 	parseAppearance,
+	parseBoardDate,
+	parseChangeTaskStatusCommand,
 	parseInterfaceLocale,
 	parseIpcResponse,
 	parseNull,
+	parseProject,
+	parseProjectDraft,
 	parseStartupState,
+	parseTask,
+	parseTaskBoardSnapshot,
+	parseTaskDraft,
+	parseTaskId,
+	parseTaskRevisionCommand,
+	parseUpdateProjectCommand,
+	parseUpdateTaskCommand,
 	parseWindowState,
 	type RuntimeParser
 } from '../shared/ipcProtocol'
@@ -44,6 +55,39 @@ const trackMeApi: TrackMeApi = {
 				ipcChannels.setInterfaceLocale,
 				parseInterfaceLocale(locale),
 				parseApplicationSettings
+			)
+	},
+	tasks: {
+		getBoard: (localDate) =>
+			invokeValidated(
+				ipcChannels.getTaskBoard,
+				parseBoardDate(localDate),
+				parseTaskBoardSnapshot
+			),
+		get: (id) => invokeValidated(ipcChannels.getTask, parseTaskId(id), parseTask),
+		create: (draft) =>
+			invokeValidated(ipcChannels.createTask, parseTaskDraft(draft), parseTask),
+		update: (command) =>
+			invokeValidated(ipcChannels.updateTask, parseUpdateTaskCommand(command), parseTask),
+		changeStatus: (command) =>
+			invokeValidated(
+				ipcChannels.changeTaskStatus,
+				parseChangeTaskStatusCommand(command),
+				parseTask
+			),
+		archive: (command) =>
+			invokeValidated(ipcChannels.archiveTask, parseTaskRevisionCommand(command), parseTask),
+		restore: (command) =>
+			invokeValidated(ipcChannels.restoreTask, parseTaskRevisionCommand(command), parseTask)
+	},
+	projects: {
+		create: (draft) =>
+			invokeValidated(ipcChannels.createProject, parseProjectDraft(draft), parseProject),
+		update: (command) =>
+			invokeValidated(
+				ipcChannels.updateProject,
+				parseUpdateProjectCommand(command),
+				parseProject
 			)
 	},
 	window: {

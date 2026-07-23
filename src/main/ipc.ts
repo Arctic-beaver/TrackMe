@@ -5,14 +5,24 @@ import {
 	createIpcSuccess,
 	IpcContractError,
 	parseAppearance,
+	parseBoardDate,
+	parseChangeTaskStatusCommand,
 	parseInterfaceLocale,
 	parseIpcRequest,
 	parseNull,
+	parseProjectDraft,
+	parseTaskDraft,
+	parseTaskId,
+	parseTaskRevisionCommand,
+	parseUpdateProjectCommand,
+	parseUpdateTaskCommand,
 	type IpcError,
 	type IpcErrorCode,
 	type RuntimeParser
 } from '../shared/ipcProtocol'
 import type { SettingsRepository } from './database/settingsRepository'
+import type { TaskRepository } from './database/taskRepository'
+import { DomainValidationError, RevisionConflictError } from '../shared/taskDomain'
 
 export class IpcFault extends Error {
 	readonly code: IpcErrorCode
@@ -26,8 +36,22 @@ export class IpcFault extends Error {
 
 function toIpcError(error: unknown): IpcError {
 	if (error instanceof IpcFault) return { code: error.code, message: error.message }
+	if (error instanceof RevisionConflictError) {
+		return { code: 'REVISION_CONFLICT', message: error.message }
+	}
+	if (error instanceof DomainValidationError) {
+		return { code: 'INVALID_REQUEST', message: error.message }
+	}
 	if (error instanceof IpcContractError) {
 		return { code: 'INVALID_REQUEST', message: error.message }
+	}
+	if (
+		typeof error === 'object' &&
+		error !== null &&
+		'code' in error &&
+		(error.code === 'ERR_SQLITE_BUSY' || error.code === 'ERR_SQLITE_LOCKED')
+	) {
+		return { code: 'STORAGE_BUSY', message: 'Local storage is temporarily busy.' }
 	}
 	console.error('Unhandled TrackMe IPC error:', error)
 	return { code: 'INTERNAL_ERROR', message: 'The application could not complete the request.' }
@@ -43,6 +67,7 @@ export interface IpcDependencies {
 	readonly getWindow: () => BrowserWindow | null
 	readonly getStartupState: (window: BrowserWindow) => StartupState
 	readonly settings: SettingsRepository
+	readonly tasks: TaskRepository
 	readonly onSettingsChanged: (settings: ApplicationSettings) => void
 	readonly onRendererReady: (window: BrowserWindow) => void
 }
@@ -92,6 +117,31 @@ export function registerIpcHandlers(dependencies: IpcDependencies): () => void {
 		dependencies.onSettingsChanged(settings)
 		return settings
 	})
+	register(ipcChannels.getTaskBoard, parseBoardDate, (_window, localDate) =>
+		dependencies.tasks.getBoard(localDate)
+	)
+	register(ipcChannels.getTask, parseTaskId, (_window, id) => dependencies.tasks.get(id))
+	register(ipcChannels.createTask, parseTaskDraft, (_window, draft) =>
+		dependencies.tasks.create(draft)
+	)
+	register(ipcChannels.updateTask, parseUpdateTaskCommand, (_window, command) =>
+		dependencies.tasks.update(command)
+	)
+	register(ipcChannels.changeTaskStatus, parseChangeTaskStatusCommand, (_window, command) =>
+		dependencies.tasks.changeStatus(command)
+	)
+	register(ipcChannels.archiveTask, parseTaskRevisionCommand, (_window, command) =>
+		dependencies.tasks.archive(command)
+	)
+	register(ipcChannels.restoreTask, parseTaskRevisionCommand, (_window, command) =>
+		dependencies.tasks.restore(command)
+	)
+	register(ipcChannels.createProject, parseProjectDraft, (_window, draft) =>
+		dependencies.tasks.createProject(draft)
+	)
+	register(ipcChannels.updateProject, parseUpdateProjectCommand, (_window, command) =>
+		dependencies.tasks.updateProject(command)
+	)
 	register(ipcChannels.minimizeWindow, parseNull, (window) => {
 		window.minimize()
 		return null
