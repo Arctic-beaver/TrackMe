@@ -6,11 +6,13 @@ import { useLocalization } from '../localization/useLocalization'
 export function TitleBar({
 	platform,
 	initialMaximized,
-	onOpenAppearance
+	onOpenAppearance,
+	onCreateTask
 }: {
 	readonly platform: DesktopPlatform
 	readonly initialMaximized: boolean
 	readonly onOpenAppearance: () => void
+	readonly onCreateTask: () => void
 }): React.JSX.Element {
 	const { t } = useLocalization()
 	const [maximized, setMaximized] = useState(initialMaximized)
@@ -37,7 +39,12 @@ export function TitleBar({
 				>
 					<Palette aria-hidden="true" />
 				</button>
-				<button type="button" className="create-button" disabled>
+				<button
+					type="button"
+					className="create-button"
+					onClick={onCreateTask}
+					aria-label={t('actions.create')}
+				>
 					<Plus aria-hidden="true" />
 					<span>{t('actions.create')}</span>
 				</button>

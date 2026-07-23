@@ -1,4 +1,7 @@
 import assert from 'node:assert/strict'
+import { mkdtemp, rm } from 'node:fs/promises'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
 import { describe, it } from 'node:test'
 import { openTrackMeDatabase } from './database'
 import { TaskRepository } from './taskRepository'
@@ -107,6 +110,107 @@ describe('task repository', () => {
 			assert.equal(restored.tags[0]?.name, 'Safe')
 		} finally {
 			database.close()
+		}
+	})
+
+	it('updates projects optimistically and preserves planned and completion invariants', async () => {
+		const database = await openTrackMeDatabase(':memory:')
+		try {
+			const repository = new TaskRepository(database, {
+				createId: ids(),
+				now: () => '2026-07-23T10:00:00.000Z'
+			})
+			const project = repository.createProject({ name: 'Launch', description: '' })
+			const updatedProject = repository.updateProject({
+				id: project.id,
+				expectedRevision: project.revision,
+				name: 'Launch plan',
+				description: 'https://example.test/launch'
+			})
+			assert.equal(updatedProject.name, 'Launch plan')
+			assert.equal(updatedProject.revision, 2)
+			assert.throws(
+				() =>
+					repository.updateProject({
+						id: project.id,
+						expectedRevision: 1,
+						name: 'Stale',
+						description: ''
+					}),
+				/The item changed/
+			)
+
+			const created = repository.create({
+				title: 'Move through statuses',
+				description: '',
+				status: 'todo',
+				estimateDays: 1,
+				dueDate: '2026-07-25',
+				startMode: 'auto',
+				preferredStartDate: null,
+				projectId: project.id,
+				tagNames: [],
+				localDate: '2026-07-23'
+			})
+			const planned = repository.changeStatus({
+				id: created.id,
+				expectedRevision: created.revision,
+				status: 'planned',
+				localDate: '2026-07-23'
+			})
+			assert.equal(planned.plannedForDate, '2026-07-23')
+			const done = repository.changeStatus({
+				id: planned.id,
+				expectedRevision: planned.revision,
+				status: 'done',
+				localDate: '2026-07-24'
+			})
+			assert.equal(done.plannedForDate, null)
+			assert.equal(done.completedAt, '2026-07-23T10:00:00.000Z')
+			const reopened = repository.changeStatus({
+				id: done.id,
+				expectedRevision: done.revision,
+				status: 'in_progress',
+				localDate: '2026-07-24'
+			})
+			assert.equal(reopened.completedAt, null)
+		} finally {
+			database.close()
+		}
+	})
+
+	it('keeps created tasks after the database is closed and reopened', async () => {
+		const directory = await mkdtemp(join(tmpdir(), 'trackme-task-persistence-test-'))
+		try {
+			const path = join(directory, 'trackme.sqlite3')
+			const firstDatabase = await openTrackMeDatabase(path)
+			const firstRepository = new TaskRepository(firstDatabase, {
+				createId: ids(),
+				now: () => '2026-07-23T10:00:00.000Z'
+			})
+			firstRepository.create({
+				title: 'Persist across launch',
+				description: 'Stored locally',
+				status: 'todo',
+				estimateDays: 2,
+				dueDate: '2026-07-25',
+				startMode: 'auto',
+				preferredStartDate: null,
+				projectId: null,
+				tagNames: ['Durable'],
+				localDate: '2026-07-23'
+			})
+			firstDatabase.close()
+
+			const secondDatabase = await openTrackMeDatabase(path)
+			const restored = new TaskRepository(secondDatabase).getBoard('2026-07-23').tasks
+			assert.equal(restored.length, 1)
+			assert.equal(restored[0]?.title, 'Persist across launch')
+			assert.equal(restored[0]?.description, 'Stored locally')
+			assert.equal(restored[0]?.tags[0]?.name, 'Durable')
+			secondDatabase.close()
+		} finally {
+			await rm(directory, { recursive: true, force: true })
 		}
 	})
 })

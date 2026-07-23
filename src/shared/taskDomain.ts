@@ -146,6 +146,15 @@ export function addLocalDateDays(value: string, days: number): string {
 	return formatParts(fromOrdinal(toOrdinal(parts) + days))
 }
 
+export function differenceInLocalDays(from: string, to: string): number {
+	const fromParts = parseLocalDateParts(from)
+	const toParts = parseLocalDateParts(to)
+	if (fromParts === null || toParts === null) {
+		throw new DomainValidationError('dueDate', 'The date comparison is invalid.')
+	}
+	return toOrdinal(toParts) - toOrdinal(fromParts)
+}
+
 export function calculatePreferredStart(dueDate: string, estimateDays: number): string {
 	assertLocalDate(dueDate, 'dueDate')
 	if (!Number.isSafeInteger(estimateDays) || estimateDays < 1 || estimateDays > 36_500) {

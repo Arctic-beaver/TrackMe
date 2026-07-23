@@ -6,6 +6,7 @@ import {
 	calculatePreferredStart,
 	classifyTaskUrgency,
 	compareTasksForToday,
+	differenceInLocalDays,
 	prepareTaskDraft
 } from './taskDomain'
 
@@ -37,6 +38,7 @@ describe('task domain', () => {
 		assert.equal(calculatePreferredStart('2026-03-01', 2), '2026-02-28')
 		assert.equal(addLocalDateDays('2024-02-28', 1), '2024-02-29')
 		assert.equal(addLocalDateDays('2024-02-29', 1), '2024-03-01')
+		assert.equal(differenceInLocalDays('2024-02-28', '2024-03-01'), 2)
 	})
 
 	it('keeps a manual start and rejects one after the deadline', () => {

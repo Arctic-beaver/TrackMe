@@ -78,6 +78,15 @@ export function formatCalendarDate(locale: ResolvedInterfaceLocale, date: Date):
 	}).format(date)
 }
 
+export function formatLocalDate(locale: ResolvedInterfaceLocale, localDate: string): string {
+	const [year, month, day] = localDate.split('-').map(Number)
+	return new Intl.DateTimeFormat(intlLocales[locale], {
+		day: 'numeric',
+		month: 'short',
+		year: 'numeric'
+	}).format(new Date(year ?? 0, (month ?? 1) - 1, day ?? 1))
+}
+
 export function localizationParameters(message: LocalizedMessage): readonly string[] {
 	const templates = typeof message === 'string' ? [message] : Object.values(message)
 	return [
