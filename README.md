@@ -3,9 +3,10 @@
 TrackMe is a calm local-first desktop planner built with Electron, React and
 TypeScript.
 
-Stage 1 is complete: the secure Electron shell, SQLite schema, three-language
-localization, four theme families and responsive Today foundation are working.
-Task lifecycle functionality starts in Stage 2.
+Stage 2 is complete: the secure Electron shell now includes a transactional task
+lifecycle, projects and tags, a persistent four-status Today board, urgency
+sorting, filters, archive recovery, three-language localization and responsive
+keyboard-accessible workflows.
 
 The implementation sequence and required Git branches are defined in
 [docs/project-plan/ROADMAP.md](docs/project-plan/ROADMAP.md).
