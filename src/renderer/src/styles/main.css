@@ -653,12 +653,6 @@ svg {
 	padding: 0.12rem 0.15rem 0.6rem;
 }
 
-.column-header small {
-	display: block;
-	margin-top: 0.18rem;
-	color: var(--muted);
-}
-
 .column-title {
 	display: flex;
 	align-items: center;

@@ -10,35 +10,30 @@ const columns: ReadonlyArray<{
 	readonly id: TaskStatus
 	readonly compactId: 'todo' | 'planned' | 'inProgress' | 'done'
 	readonly titleKey: LocalizationKey
-	readonly noteKey: LocalizationKey
 	readonly icon: typeof Inbox
 }> = [
 	{
 		id: 'todo',
 		compactId: 'todo',
 		titleKey: 'task.status.todo',
-		noteKey: 'column.todo.note',
 		icon: Inbox
 	},
 	{
 		id: 'planned',
 		compactId: 'planned',
 		titleKey: 'task.status.planned',
-		noteKey: 'column.planned.note',
 		icon: CircleDot
 	},
 	{
 		id: 'in_progress',
 		compactId: 'inProgress',
 		titleKey: 'task.status.inProgress',
-		noteKey: 'column.inProgress.note',
 		icon: Play
 	},
 	{
 		id: 'done',
 		compactId: 'done',
 		titleKey: 'task.status.done',
-		noteKey: 'column.done.note',
 		icon: CheckCircle2
 	}
 ]
@@ -136,13 +131,10 @@ export function TodayBoard({
 							onDragEnd={() => setDraggingTask(null)}
 						>
 							<header className="column-header">
-								<div>
-									<span className="column-title">
-										<Icon aria-hidden="true" />
-										<strong>{t(column.titleKey)}</strong>
-									</span>
-									<small>{t(column.noteKey)}</small>
-								</div>
+								<span className="column-title">
+									<Icon aria-hidden="true" />
+									<strong>{t(column.titleKey)}</strong>
+								</span>
 								<span className="column-count">{allColumnTasks.length}</span>
 							</header>
 							<div className="task-list">
