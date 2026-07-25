@@ -18,6 +18,7 @@ files:
     - '!{tsconfig.json,tsconfig.node.json,tsconfig.web.json,tsconfig.test.json}'
 win:
     executableName: TrackMe
+    icon: build/icon.png
 nsis:
     artifactName: ${productName}-${version}-Setup.${ext}
     oneClick: false
@@ -29,10 +30,12 @@ nsis:
     runAfterFinish: true
 mac:
     category: public.app-category.productivity
+    icon: build/icon.png
     notarize: false
 dmg:
     artifactName: ${productName}-${version}.${ext}
 linux:
+    icon: build/icon.png
     target:
         - AppImage
     maintainer: TrackMe
