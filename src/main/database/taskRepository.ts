@@ -17,6 +17,7 @@ import type {
 import {
 	DomainValidationError,
 	normalizeEntityName,
+	prepareProjectDraft,
 	prepareTaskDraft,
 	RevisionConflictError,
 	todayLocalDate
@@ -83,23 +84,6 @@ function immutableProject(row: ProjectRow): Project {
 		completedTaskCount: row.completed_task_count,
 		totalTaskCount: row.total_task_count
 	})
-}
-
-function cleanProjectDraft(
-	draft: ProjectDraft
-): ProjectDraft & { readonly normalizedName: string } {
-	const name = draft.name.trim().normalize('NFC')
-	const description = draft.description.trim().normalize('NFC')
-	if (name.length === 0 || name.length > 160) {
-		throw new DomainValidationError(
-			'projectName',
-			'Project name is required and cannot exceed 160 characters.'
-		)
-	}
-	if (description.length > 20_000) {
-		throw new DomainValidationError('description', 'Project description is too long.')
-	}
-	return { name, description, normalizedName: normalizeEntityName(name) }
 }
 
 const taskColumns = `
@@ -197,7 +181,7 @@ export class SqliteTaskRepository implements TaskRepositoryPort {
 	}
 
 	createProject(draft: ProjectDraft): Project {
-		const prepared = cleanProjectDraft(draft)
+		const prepared = prepareProjectDraft(draft)
 		return this.#database.transaction(() => {
 			this.#assertProjectNameAvailable(prepared.normalizedName)
 			const id = this.#createId()
@@ -216,7 +200,7 @@ export class SqliteTaskRepository implements TaskRepositoryPort {
 	}
 
 	updateProject(command: UpdateProjectCommand): Project {
-		const prepared = cleanProjectDraft(command)
+		const prepared = prepareProjectDraft(command)
 		return this.#database.transaction(() => {
 			this.#assertProjectNameAvailable(prepared.normalizedName, command.id)
 			const result = this.#database.connection

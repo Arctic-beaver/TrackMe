@@ -21,9 +21,10 @@ describe('task repository', () => {
 				currentLocalDate: () => '2026-07-23'
 			})
 			const project = repository.createProject({
-				name: 'Tiempio',
+				name: 'Tiempio 🚀',
 				description: 'https://example.test'
 			})
+			assert.equal(project.name, 'Tiempio 🚀')
 			const created = repository.create({
 				title: 'Ship Today board',
 				description: '',
@@ -292,24 +293,24 @@ describe('task repository', () => {
 				currentLocalDate: () => '2026-07-23'
 			})
 			firstRepository.create({
-				title: 'Persist across launch',
-				description: 'Stored locally',
+				title: 'Persist across launch 🚀',
+				description: 'Stored locally for the team 👩🏽‍💻',
 				status: 'todo',
 				estimateDays: 2,
 				dueDate: '2026-07-25',
 				startMode: 'auto',
 				preferredStartDate: null,
 				projectId: null,
-				tagNames: ['Durable']
+				tagNames: ['Durable 🛡️']
 			})
 			firstDatabase.close()
 
 			const secondDatabase = await openTiempioDatabase(path)
 			const restored = new SqliteTaskRepository(secondDatabase).getBoard().tasks
 			assert.equal(restored.length, 1)
-			assert.equal(restored[0]?.title, 'Persist across launch')
-			assert.equal(restored[0]?.description, 'Stored locally')
-			assert.equal(restored[0]?.tags[0]?.name, 'Durable')
+			assert.equal(restored[0]?.title, 'Persist across launch 🚀')
+			assert.equal(restored[0]?.description, 'Stored locally for the team 👩🏽‍💻')
+			assert.equal(restored[0]?.tags[0]?.name, 'Durable 🛡️')
 			secondDatabase.close()
 		} finally {
 			await rm(directory, { recursive: true, force: true })

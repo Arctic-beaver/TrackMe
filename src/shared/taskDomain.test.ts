@@ -64,6 +64,27 @@ describe('task domain', () => {
 		)
 	})
 
+	it('applies title limits to user-visible graphemes', () => {
+		const familyEmoji = '👨‍👩‍👧‍👦'
+		const draft = {
+			title: familyEmoji.repeat(240),
+			description: 'Release notes 👩🏽‍💻',
+			status: 'todo' as const,
+			estimateDays: 1,
+			dueDate: '2026-07-25',
+			startMode: 'auto' as const,
+			preferredStartDate: null,
+			projectId: null,
+			tagNames: ['Launch 🚀']
+		}
+
+		assert.equal(prepareTaskDraft(draft).title, draft.title)
+		assert.throws(
+			() => prepareTaskDraft({ ...draft, title: `${draft.title}${familyEmoji}` }),
+			/240 characters/
+		)
+	})
+
 	it('classifies and sorts every active urgency category', () => {
 		const localDate = '2026-07-23'
 		const dueToday = task({ id: 'today', dueDate: localDate })

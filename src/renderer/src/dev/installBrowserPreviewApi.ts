@@ -10,9 +10,11 @@ import {
 import {
 	addLocalDateDays,
 	normalizeEntityName,
+	prepareProjectDraft,
 	prepareTaskDraft,
 	todayLocalDate
 } from '../../../shared/taskDomain'
+import { normalizeUserText } from '../../../shared/userText'
 
 let settings = createDefaultApplicationSettings()
 let nextId = 0
@@ -54,7 +56,7 @@ function resolveTags(names: readonly string[]): readonly Tag[] {
 		const normalized = normalizeEntityName(name)
 		const existing = tags.find((tag) => normalizeEntityName(tag.name) === normalized)
 		if (existing !== undefined) return existing
-		const created = { id: id('tag'), name: name.trim(), createdAt: now() }
+		const created = { id: id('tag'), name: normalizeUserText(name), createdAt: now() }
 		tags = [...tags, created]
 		return created
 	})
@@ -272,11 +274,12 @@ export function installBrowserPreviewApi(): void {
 		},
 		projects: {
 			create: (draft) => {
+				const prepared = prepareProjectDraft(draft)
 				const timestamp = now()
 				const project: Project = {
 					id: id('project'),
-					name: draft.name.trim(),
-					description: draft.description.trim(),
+					name: prepared.name,
+					description: prepared.description,
 					revision: 1,
 					createdAt: timestamp,
 					updatedAt: timestamp,
@@ -289,10 +292,11 @@ export function installBrowserPreviewApi(): void {
 			update: (command) => {
 				const current = projects.find((project) => project.id === command.id)
 				if (current === undefined) return Promise.reject(new Error('Project not found.'))
+				const prepared = prepareProjectDraft(command)
 				const updated = {
 					...current,
-					name: command.name.trim(),
-					description: command.description.trim(),
+					name: prepared.name,
+					description: prepared.description,
 					revision: current.revision + 1,
 					updatedAt: now()
 				}

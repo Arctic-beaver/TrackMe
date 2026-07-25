@@ -458,6 +458,7 @@ Accessible name полосы включает:
 - wide 1440 px, medium 1000 px, compact 600 px;
 - четыре темы × light/dark, fallback без blur, reduced motion;
 - длинные русские и испанские названия;
+- названия с emoji, включая составные ZWJ-последовательности и variation selectors;
 - loading, empty, filtered empty, storage busy и generic recovery;
 - архивная задача отсутствует после обновления текущего диапазона.
 

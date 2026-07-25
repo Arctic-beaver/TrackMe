@@ -1,4 +1,5 @@
-import type { Task, TaskDraft, TaskStartMode, TaskUrgency } from './contracts'
+import type { ProjectDraft, Task, TaskDraft, TaskStartMode, TaskUrgency } from './contracts'
+import { isWithinGraphemeLimit, normalizeUserText } from './userText'
 
 const localDatePattern = /^(\d{4})-(\d{2})-(\d{2})$/
 const daysBeforeMonth = Object.freeze([0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334])
@@ -50,6 +51,10 @@ export interface PreparedTaskDraft {
 	readonly preferredStartDate: string
 	readonly projectId: string | null
 	readonly tagNames: readonly string[]
+}
+
+export interface PreparedProjectDraft extends ProjectDraft {
+	readonly normalizedName: string
 }
 
 function isLeapYear(year: number): boolean {
@@ -176,9 +181,9 @@ export function todayLocalDate(now = new Date()): string {
 function cleanedTagNames(tagNames: readonly string[]): readonly string[] {
 	const byNormalizedName = new Map<string, string>()
 	for (const name of tagNames) {
-		const trimmed = name.trim().normalize('NFC')
+		const trimmed = normalizeUserText(name)
 		if (trimmed.length === 0) continue
-		if (trimmed.length > 80) {
+		if (!isWithinGraphemeLimit(trimmed, 80)) {
 			throw new DomainValidationError('tagNames', 'Tag names cannot exceed 80 characters.')
 		}
 		const normalized = trimmed.toLowerCase()
@@ -188,19 +193,34 @@ function cleanedTagNames(tagNames: readonly string[]): readonly string[] {
 }
 
 export function normalizeEntityName(value: string): string {
-	return value.trim().normalize('NFC').toLowerCase()
+	return normalizeUserText(value).toLowerCase()
+}
+
+export function prepareProjectDraft(draft: ProjectDraft): PreparedProjectDraft {
+	const name = normalizeUserText(draft.name)
+	const description = normalizeUserText(draft.description)
+	if (name.length === 0 || !isWithinGraphemeLimit(name, 160)) {
+		throw new DomainValidationError(
+			'projectName',
+			'Project name is required and cannot exceed 160 characters.'
+		)
+	}
+	if (!isWithinGraphemeLimit(description, 20_000)) {
+		throw new DomainValidationError('description', 'Project description is too long.')
+	}
+	return { name, description, normalizedName: normalizeEntityName(name) }
 }
 
 export function prepareTaskDraft(draft: TaskDraft): PreparedTaskDraft {
-	const title = draft.title.trim().normalize('NFC')
-	const description = draft.description.trim().normalize('NFC')
-	if (title.length === 0 || title.length > 240) {
+	const title = normalizeUserText(draft.title)
+	const description = normalizeUserText(draft.description)
+	if (title.length === 0 || !isWithinGraphemeLimit(title, 240)) {
 		throw new DomainValidationError(
 			'title',
 			'Task title is required and cannot exceed 240 characters.'
 		)
 	}
-	if (description.length > 20_000) {
+	if (!isWithinGraphemeLimit(description, 20_000)) {
 		throw new DomainValidationError('description', 'Task description is too long.')
 	}
 	const dueDate = assertLocalDate(draft.dueDate, 'dueDate')

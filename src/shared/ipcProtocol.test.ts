@@ -162,6 +162,21 @@ describe('IPC protocol', () => {
 		assert.throws(() => parseListArchivedTasksQuery({ offset: 0, limit: 51 }), IpcContractError)
 	})
 
+	it('preserves composed emoji and limits user-visible graphemes', () => {
+		const emojiDraft = {
+			...draft,
+			title: 'Plan release 🚀',
+			description: 'Pair with the platform team 👩🏽‍💻',
+			tagNames: ['Focus 🎯']
+		}
+		assert.deepEqual(parseTaskDraft(emojiDraft), emojiDraft)
+		assert.doesNotThrow(() => parseTaskDraft({ ...emojiDraft, title: '👨‍👩‍👧‍👦'.repeat(240) }))
+		assert.throws(
+			() => parseTaskDraft({ ...emojiDraft, title: '🚀'.repeat(241) }),
+			IpcContractError
+		)
+	})
+
 	it('validates task, project and paginated board results', () => {
 		assert.deepEqual(parseTag(tag), tag)
 		assert.deepEqual(parseTask(task), task)

@@ -24,6 +24,7 @@ import {
 	type WindowState
 } from './contracts'
 import { isLocalDate } from './taskDomain'
+import { isWithinGraphemeLimit } from './userText'
 
 export const ipcProtocolVersion = 1 as const
 
@@ -111,6 +112,13 @@ function parseString(value: unknown, label: string, maximumLength = 20_000): str
 	return value
 }
 
+function parseUserText(value: unknown, label: string, maximumGraphemes = 20_000): string {
+	if (typeof value !== 'string' || !isWithinGraphemeLimit(value, maximumGraphemes)) {
+		throw new IpcContractError(`${label} is invalid.`)
+	}
+	return value
+}
+
 function parseId(value: unknown, label = 'Identifier'): string {
 	const id = parseString(value, label, 128)
 	if (id.length === 0) throw new IpcContractError(`${label} is invalid.`)
@@ -136,7 +144,7 @@ function parseStringArray(value: unknown, label: string): readonly string[] {
 	if (!Array.isArray(value) || value.length > 200) {
 		throw new IpcContractError(`${label} is invalid.`)
 	}
-	return Object.freeze(value.map((item) => parseString(item, label, 80)))
+	return Object.freeze(value.map((item) => parseUserText(item, label, 80)))
 }
 
 export class IpcContractError extends Error {
@@ -245,8 +253,8 @@ export function parseTaskDraft(value: unknown): TaskDraft {
 		throw new IpcContractError('Task draft is invalid.')
 	}
 	return Object.freeze({
-		title: parseString(value.title, 'Task title', 240),
-		description: parseString(value.description, 'Task description'),
+		title: parseUserText(value.title, 'Task title', 240),
+		description: parseUserText(value.description, 'Task description'),
 		status: value.status,
 		estimateDays: parsePositiveInteger(value.estimateDays, 'Task estimate'),
 		dueDate: parseLocalDate(value.dueDate, 'Task deadline'),
@@ -291,8 +299,8 @@ export function parseTaskRevisionCommand(value: unknown): TaskRevisionCommand {
 export function parseProjectDraft(value: unknown): ProjectDraft {
 	if (!isRecord(value)) throw new IpcContractError('Project draft is invalid.')
 	return Object.freeze({
-		name: parseString(value.name, 'Project name', 160),
-		description: parseString(value.description, 'Project description')
+		name: parseUserText(value.name, 'Project name', 160),
+		description: parseUserText(value.description, 'Project description')
 	})
 }
 
@@ -321,7 +329,7 @@ export function parseTag(value: unknown): Tag {
 	if (!isRecord(value)) throw new IpcContractError('Tag is invalid.')
 	return Object.freeze({
 		id: parseId(value.id, 'Tag identifier'),
-		name: parseString(value.name, 'Tag name', 80),
+		name: parseUserText(value.name, 'Tag name', 80),
 		createdAt: parseString(value.createdAt, 'Tag creation time', 64)
 	})
 }
@@ -330,8 +338,8 @@ export function parseProject(value: unknown): Project {
 	if (!isRecord(value)) throw new IpcContractError('Project is invalid.')
 	return Object.freeze({
 		id: parseId(value.id, 'Project identifier'),
-		name: parseString(value.name, 'Project name', 160),
-		description: parseString(value.description, 'Project description'),
+		name: parseUserText(value.name, 'Project name', 160),
+		description: parseUserText(value.description, 'Project description'),
 		revision: parsePositiveInteger(value.revision, 'Project revision'),
 		createdAt: parseString(value.createdAt, 'Project creation time', 64),
 		updatedAt: parseString(value.updatedAt, 'Project update time', 64),
@@ -351,8 +359,8 @@ export function parseTask(value: unknown): Task {
 	}
 	return Object.freeze({
 		id: parseId(value.id, 'Task identifier'),
-		title: parseString(value.title, 'Task title', 240),
-		description: parseString(value.description, 'Task description'),
+		title: parseUserText(value.title, 'Task title', 240),
+		description: parseUserText(value.description, 'Task description'),
 		status: value.status,
 		estimateDays: parsePositiveInteger(value.estimateDays, 'Task estimate'),
 		dueDate: parseLocalDate(value.dueDate, 'Task deadline'),
