@@ -46,6 +46,11 @@ export default defineConfig({
 				'@shared': resolve('src/shared')
 			}
 		},
+		build: {
+			minify: 'esbuild',
+			cssMinify: 'esbuild',
+			reportCompressedSize: true
+		},
 		plugins: [rendererContentSecurityPolicy(), react()]
 	}
 })

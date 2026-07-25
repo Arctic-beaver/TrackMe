@@ -43,10 +43,10 @@ describe('production theme policy', () => {
 	})
 
 	it('rejects scrollbar rules outside the centralized stylesheet', () => {
-		const invalidCss = `${productionCss}\n.panel { scrollbar-width: auto; }`
+		const extraStyles = [{ path: 'components.css', css: '.panel { scrollbar-width: auto; }' }]
 		assert.ok(
-			auditScrollbarSystem(invalidCss, scrollbarCss).failures.includes(
-				'scrollbar implementation must remain in scrollbars.css'
+			auditScrollbarSystem(productionCss, scrollbarCss, extraStyles).failures.includes(
+				'components.css: scrollbar implementation must remain in scrollbars.css'
 			)
 		)
 	})

@@ -1,4 +1,5 @@
-import { readFile } from 'node:fs/promises'
+import { readdir, readFile } from 'node:fs/promises'
+import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const themeFamilies = ['graphite-navy', 'linen-blue', 'pebble-steel', 'fog-indigo']
@@ -105,7 +106,7 @@ export function auditProductionThemes(css) {
 	return { failures, schemes: parsed }
 }
 
-export function auditScrollbarSystem(entryCss, scrollbarCss) {
+export function auditScrollbarSystem(entryCss, scrollbarCss, otherStyles = []) {
 	const failures = []
 	const imports = entryCss.match(/@import\s+['"]\.\/scrollbars\.css['"]\s*;/gu) ?? []
 	const requiredTokens = [
@@ -141,6 +142,15 @@ export function auditScrollbarSystem(entryCss, scrollbarCss) {
 	if (/::-webkit-scrollbar|scrollbar-(?:color|width)\s*:/u.test(entryCss)) {
 		failures.push('scrollbar implementation must remain in scrollbars.css')
 	}
+	for (const style of otherStyles) {
+		if (
+			/::-webkit-scrollbar|scrollbar-(?:color|width|track|thumb|corner)(?:\s*:|-)/u.test(
+				style.css
+			)
+		) {
+			failures.push(`${style.path}: scrollbar implementation must remain in scrollbars.css`)
+		}
+	}
 	for (const token of requiredTokens) {
 		if (!new RegExp(`--${token}:`, 'u').test(scrollbarCss)) {
 			failures.push(`scrollbars.css: --${token} is missing`)
@@ -153,6 +163,19 @@ export function auditScrollbarSystem(entryCss, scrollbarCss) {
 	return { failures }
 }
 
+async function listCssFiles(directory) {
+	const entries = await readdir(directory, { withFileTypes: true })
+	const nested = await Promise.all(
+		entries.map((entry) => {
+			const path = join(directory, entry.name)
+			return entry.isDirectory()
+				? listCssFiles(path)
+				: Promise.resolve(entry.name.endsWith('.css') ? [path] : [])
+		})
+	)
+	return nested.flat()
+}
+
 const invokedPath = process.argv[1]
 if (invokedPath !== undefined && fileURLToPath(import.meta.url) === invokedPath) {
 	const cssPath =
@@ -161,13 +184,21 @@ if (invokedPath !== undefined && fileURLToPath(import.meta.url) === invokedPath)
 	const scrollbarPath = fileURLToPath(
 		new URL('../src/renderer/src/styles/scrollbars.css', import.meta.url)
 	)
-	const [entryCss, scrollbarCss] = await Promise.all([
+	const cssFiles = await listCssFiles(dirname(cssPath))
+	const [entryCss, scrollbarCss, otherStyles] = await Promise.all([
 		readFile(cssPath, 'utf8'),
-		readFile(scrollbarPath, 'utf8')
+		readFile(scrollbarPath, 'utf8'),
+		Promise.all(
+			cssFiles
+				.filter(
+					(path) => ![resolve(cssPath), resolve(scrollbarPath)].includes(resolve(path))
+				)
+				.map(async (path) => ({ path, css: await readFile(path, 'utf8') }))
+		)
 	])
 	const failures = [
 		...auditProductionThemes(entryCss).failures,
-		...auditScrollbarSystem(entryCss, scrollbarCss).failures
+		...auditScrollbarSystem(entryCss, scrollbarCss, otherStyles).failures
 	]
 	if (failures.length > 0) {
 		for (const failure of failures) console.error(`FAIL ${failure}`)
