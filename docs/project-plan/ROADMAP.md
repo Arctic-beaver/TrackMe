@@ -161,6 +161,8 @@ phase-ветка не должна использоваться как осно�
 
 - рабочее название заменено на Tiempio во всём продукте, package metadata,
   installer, executable, custom protocol, preload bridge и документации;
+- знак Tiempio заменён на векторный pulse line с компактной стрелкой; белый
+  raster-вариант сохраняет прозрачный фон для package pipeline;
 - новые пользовательские данные сохраняются в `tiempio.sqlite3`;
 - существующая локальная база переносится в профиль Tiempio через проверенный
   SQLite snapshot без удаления исходного файла;

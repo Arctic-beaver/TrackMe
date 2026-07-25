@@ -47,7 +47,10 @@ Repository ports возвращают `Awaitable<T>`. Поэтому desktop м�
 - backup-расширению `.tiempio`;
 - smoke profiles, тестам и документации.
 
-Нейтральная иконка с checkmark не содержит старого имени и сохраняется.
+Новый знак Tiempio соединяет pulse line с небольшой стрелкой движения вперёд.
+Его мастер хранится в `build/icon.svg`; белый `build/icon.png` на прозрачном фоне
+используется Electron Builder. Цвет и возможный фон выбираются отдельно без
+изменения базовой геометрии.
 Зарезервированные продуктовые домены: `tiempio.com` и `tiempio.app`.
 
 ## Сохранение существующих данных
@@ -90,7 +93,7 @@ lazy-loaded UX-улучшением.
 
 Фактически пройдены:
 
-- repository policy для 106 текстовых файлов;
+- repository policy для 107 текстовых файлов;
 - новый Tiempio brand audit;
 - Prettier и ESLint;
 - i18n, theme и UI audits;
