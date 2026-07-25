@@ -28,7 +28,7 @@ export function ArchivedTasksDialog({
 		setLoading(true)
 		setLoadError(false)
 		try {
-			const page = await window.trackme.tasks.listArchived({
+			const page = await window.tiempio.tasks.listArchived({
 				offset,
 				limit: pageSize
 			})
@@ -50,7 +50,7 @@ export function ArchivedTasksDialog({
 		setBusyTaskId(task.id)
 		setLoadError(false)
 		try {
-			const restored = await window.trackme.tasks.restore({
+			const restored = await window.tiempio.tasks.restore({
 				id: task.id,
 				expectedRevision: task.revision
 			})

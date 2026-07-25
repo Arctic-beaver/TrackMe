@@ -65,7 +65,7 @@ export function TitleBar({
 						<button
 							type="button"
 							className="window-button"
-							onClick={() => void window.trackme.window.minimize()}
+							onClick={() => void window.tiempio.window.minimize()}
 							aria-label={t('window.minimize')}
 						>
 							<Minus aria-hidden="true" />
@@ -74,7 +74,7 @@ export function TitleBar({
 							type="button"
 							className="window-button"
 							onClick={() => {
-								void window.trackme.window
+								void window.tiempio.window
 									.toggleMaximize()
 									.then((state) => setMaximized(state.maximized))
 							}}
@@ -89,7 +89,7 @@ export function TitleBar({
 						<button
 							type="button"
 							className="window-button window-button-close"
-							onClick={() => void window.trackme.window.close()}
+							onClick={() => void window.tiempio.window.close()}
 							aria-label={t('window.close')}
 						>
 							<X aria-hidden="true" />

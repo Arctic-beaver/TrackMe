@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto'
+import type { TaskRepositoryPort } from '../../shared/application/ports'
 import type {
 	ArchivedTaskPage,
 	ChangeTaskStatusCommand,
@@ -20,7 +21,7 @@ import {
 	RevisionConflictError,
 	todayLocalDate
 } from '../../shared/taskDomain'
-import type { TrackMeDatabase } from './database'
+import type { TiempioDatabase } from './database'
 
 interface TaskRow {
 	readonly id: string
@@ -107,13 +108,13 @@ const taskColumns = `
 	created_at, updated_at
 `
 
-export class TaskRepository {
-	readonly #database: TrackMeDatabase
+export class SqliteTaskRepository implements TaskRepositoryPort {
+	readonly #database: TiempioDatabase
 	readonly #createId: () => string
 	readonly #now: () => string
 	readonly #currentLocalDate: () => string
 
-	constructor(database: TrackMeDatabase, options: TaskRepositoryOptions = {}) {
+	constructor(database: TiempioDatabase, options: TaskRepositoryOptions = {}) {
 		this.#database = database
 		this.#createId = options.createId ?? randomUUID
 		this.#now = options.now ?? (() => new Date().toISOString())

@@ -90,7 +90,7 @@ function quickCheck(database: DatabaseSync): void {
 	if (result?.quick_check !== 'ok') throw new Error('SQLite quick_check failed.')
 }
 
-export class TrackMeDatabase {
+export class TiempioDatabase {
 	readonly connection: DatabaseSync
 	readonly schemaVersion: number
 	#closed = false
@@ -137,7 +137,7 @@ export class TrackMeDatabase {
 	}
 }
 
-export async function openTrackMeDatabase(path: string): Promise<TrackMeDatabase> {
+export async function openTiempioDatabase(path: string): Promise<TiempioDatabase> {
 	await mkdir(dirname(path), { recursive: true })
 	const database = new DatabaseSync(path, {
 		open: true,
@@ -159,7 +159,7 @@ export async function openTrackMeDatabase(path: string): Promise<TrackMeDatabase
 		}
 		for (const nextMigration of pending) applyMigration(database, nextMigration)
 		quickCheck(database)
-		return new TrackMeDatabase(database, latestSchemaVersion)
+		return new TiempioDatabase(database, latestSchemaVersion)
 	} catch (error) {
 		database.close()
 		throw error

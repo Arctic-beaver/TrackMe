@@ -1,8 +1,8 @@
-import type { TrackMeApi } from '../../shared/contracts'
+import type { TiempioApi } from '../../shared/contracts'
 
 declare global {
 	interface Window {
-		readonly trackme: TrackMeApi
+		readonly tiempio: TiempioApi
 	}
 }
 

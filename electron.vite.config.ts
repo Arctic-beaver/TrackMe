@@ -3,7 +3,7 @@ import react from '@vitejs/plugin-react'
 import { defineConfig } from 'electron-vite'
 import type { Plugin } from 'vite'
 
-const contentSecurityPolicyMarker = '__TRACKME_CONTENT_SECURITY_POLICY__'
+const contentSecurityPolicyMarker = '__TIEMPIO_CONTENT_SECURITY_POLICY__'
 const productionContentSecurityPolicy = [
 	"default-src 'self'",
 	"script-src 'self'",
@@ -22,10 +22,10 @@ const developmentContentSecurityPolicy = productionContentSecurityPolicy
 
 function rendererContentSecurityPolicy(): Plugin {
 	return {
-		name: 'trackme-renderer-content-security-policy',
+		name: 'tiempio-renderer-content-security-policy',
 		transformIndexHtml(html, context) {
 			if (!html.includes(contentSecurityPolicyMarker)) {
-				throw new Error('Renderer HTML is missing the TrackMe CSP marker.')
+				throw new Error('Renderer HTML is missing the Tiempio CSP marker.')
 			}
 			const policy =
 				context.server === undefined

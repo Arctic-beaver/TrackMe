@@ -1,5 +1,5 @@
-appId: com.trackme.desktop
-productName: TrackMe
+appId: app.tiempio.desktop
+productName: Tiempio
 directories:
     buildResources: build
 asar: true
@@ -17,7 +17,7 @@ files:
     - '!{.env,.env.*,.npmrc,pnpm-lock.yaml}'
     - '!{tsconfig.json,tsconfig.node.json,tsconfig.web.json,tsconfig.test.json}'
 win:
-    executableName: TrackMe
+    executableName: Tiempio
     icon: build/icon.png
 nsis:
     artifactName: ${productName}-${version}-Setup.${ext}
@@ -38,6 +38,6 @@ linux:
     icon: build/icon.png
     target:
         - AppImage
-    maintainer: TrackMe
+    maintainer: Tiempio
     category: Utility
 npmRebuild: false

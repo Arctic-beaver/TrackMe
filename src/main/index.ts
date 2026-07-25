@@ -7,27 +7,36 @@ import {
 	type DesktopPlatform,
 	type ResolvedInterfaceLocale
 } from '../shared/contracts'
+import {
+	SettingsApplicationService,
+	TaskApplicationService,
+	type SettingsApplication,
+	type TaskApplication
+} from '../shared/application/services'
 import { resolveInterfaceLocale } from '../shared/localization'
 import { appProtocolUrl } from './appAssetPath'
 import { registerAppProtocol, registerAppScheme } from './appProtocol'
 import { createApplicationMenuTemplate } from './applicationMenu'
-import { openTrackMeDatabase, type TrackMeDatabase } from './database/database'
-import { SettingsRepository } from './database/settingsRepository'
-import { TaskRepository } from './database/taskRepository'
+import { openTiempioDatabase, type TiempioDatabase } from './database/database'
+import { SqliteSettingsRepository } from './database/settingsRepository'
+import { SqliteTaskRepository } from './database/taskRepository'
+import { prepareTiempioDatabasePath } from './database/userDataMigration'
 import { registerIpcHandlers } from './ipc'
 
-const packagedSmokeTest = process.argv.includes('--trackme-packaged-smoke-test')
+app.setName('Tiempio')
+
+const packagedSmokeTest = process.argv.includes('--tiempio-packaged-smoke-test')
 const smokeUserDataArgument = process.argv.find((argument) =>
-	argument.startsWith('--trackme-smoke-user-data=')
+	argument.startsWith('--tiempio-smoke-user-data=')
 )
 if (smokeUserDataArgument !== undefined) {
-	app.setPath('userData', smokeUserDataArgument.slice('--trackme-smoke-user-data='.length))
+	app.setPath('userData', smokeUserDataArgument.slice('--tiempio-smoke-user-data='.length))
 }
 
 let mainWindow: BrowserWindow | null = null
-let database: TrackMeDatabase | null = null
-let settingsRepository: SettingsRepository | null = null
-let taskRepository: TaskRepository | null = null
+let database: TiempioDatabase | null = null
+let settingsApplication: SettingsApplication | null = null
+let taskApplication: TaskApplication | null = null
 let disposeIpc: (() => void) | null = null
 let disposeProtocol: (() => void) | null = null
 let activeSettings = createDefaultApplicationSettings()
@@ -103,7 +112,7 @@ function createWindow(): BrowserWindow {
 		if (mainWindow === window) mainWindow = null
 	})
 	window.webContents.once('did-fail-load', (_event, code, description) => {
-		console.error('TrackMe renderer failed to load:', code, description)
+		console.error('Tiempio renderer failed to load:', code, description)
 		if (packagedSmokeTest) app.exit(1)
 	})
 
@@ -112,18 +121,23 @@ function createWindow(): BrowserWindow {
 			? window.loadURL(process.env['ELECTRON_RENDERER_URL'])
 			: window.loadURL(appProtocolUrl)
 	void loadRenderer.catch((error: unknown) => {
-		console.error('TrackMe renderer load failed:', error)
+		console.error('Tiempio renderer load failed:', error)
 		if (packagedSmokeTest) app.exit(1)
 	})
 	return window
 }
 
 async function startApplication(): Promise<void> {
-	app.setAppUserModelId('com.trackme.desktop')
-	database = await openTrackMeDatabase(join(app.getPath('userData'), 'trackme.sqlite3'))
-	settingsRepository = new SettingsRepository(database)
-	taskRepository = new TaskRepository(database)
-	applySettings(settingsRepository.get())
+	app.setAppUserModelId('app.tiempio.desktop')
+	const databasePath = await prepareTiempioDatabasePath({
+		appDataPath: app.getPath('appData'),
+		userDataPath: app.getPath('userData'),
+		migratePreviousInstallation: smokeUserDataArgument === undefined
+	})
+	database = await openTiempioDatabase(databasePath)
+	settingsApplication = new SettingsApplicationService(new SqliteSettingsRepository(database))
+	taskApplication = new TaskApplicationService(new SqliteTaskRepository(database))
+	applySettings(await settingsApplication.get())
 	disposeProtocol = registerAppProtocol(join(__dirname, '../renderer'))
 	disposeIpc = registerIpcHandlers({
 		getWindow: () => mainWindow,
@@ -133,8 +147,8 @@ async function startApplication(): Promise<void> {
 			windowMaximized: window.isMaximized(),
 			schemaVersion: database?.schemaVersion ?? 0
 		}),
-		settings: settingsRepository,
-		tasks: taskRepository,
+		settings: settingsApplication,
+		tasks: taskApplication,
 		onSettingsChanged: applySettings,
 		onRendererReady: (window) => {
 			if (packagedSmokeTest) {
@@ -168,7 +182,7 @@ if (!hasSingleInstanceLock) {
 		.whenReady()
 		.then(startApplication)
 		.catch((error: unknown) => {
-			console.error('TrackMe startup failed:', error)
+			console.error('Tiempio startup failed:', error)
 			app.exit(1)
 		})
 
@@ -179,8 +193,8 @@ if (!hasSingleInstanceLock) {
 		disposeProtocol = null
 		database?.close()
 		database = null
-		settingsRepository = null
-		taskRepository = null
+		settingsApplication = null
+		taskApplication = null
 	})
 
 	app.on('window-all-closed', () => {

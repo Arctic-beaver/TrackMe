@@ -1,4 +1,4 @@
-# TrackMe — архитектура MVP
+# Tiempio — архитектура MVP
 
 **Статус:** принято для начала Этапа 1  
 **Этап:** 0  
@@ -25,17 +25,15 @@ flowchart LR
     API --> IPC["Validated IPC handlers"]
     IPC --> APP["Application services"]
     APP --> DOMAIN["Pure TypeScript domain"]
-    APP --> REPO["Repository interfaces"]
-    REPO --> SQLITE["node:sqlite adapter"]
+    APP --> PORTS["Repository ports"]
+    PORTS --> SQLITE["node:sqlite adapters"]
 
     APP --> REMINDERS["Reminder scheduler"]
     APP --> BACKUP["Backup / restore service"]
-    APP --> SETTINGS["Settings repository"]
 
-    SQLITE --> DB["trackme.sqlite3"]
-    SETTINGS --> DB
+    SQLITE --> DB["tiempio.sqlite3"]
     REMINDERS --> DB
-    BACKUP --> SNAPSHOT[".trackme snapshot"]
+    BACKUP --> SNAPSHOT[".tiempio snapshot"]
 ```
 
 ### Renderer
@@ -53,7 +51,7 @@ Renderer не получает:
 
 ### Граница локализации
 
-TrackMe использует тот же типобезопасный подход, который уже проверен в Yinkie,
+Tiempio использует тот же типобезопасный подход, который уже проверен в Yinkie,
 без дополнительной runtime-зависимости:
 
 - `InterfaceLocale = 'system' | 'ru' | 'en' | 'es'`;
@@ -119,6 +117,27 @@ Electron целиком.
 - уведомлениями;
 - диалогами выбора файла;
 - резервным копированием и восстановлением.
+
+### Application services
+
+IPC вызывает только `SettingsApplication` и `TaskApplication`. Эти
+application-интерфейсы возвращают `Promise` и не знают о SQLite, Electron или
+конкретном способе хранения. Реализации `SettingsApplicationService` и
+`TaskApplicationService` координируют use cases через repository ports.
+
+Эта граница позволяет будущему web-клиенту сохранить домен и use-case API,
+заменив desktop transport и storage adapters.
+
+### Repository ports
+
+`SettingsRepositoryPort` и `TaskRepositoryPort` находятся в shared TypeScript и
+принимают только DTO из общего контракта. SQLite-адаптеры реализуют эти ports в
+main process. IPC не импортирует и не принимает конкретные SQLite-классы.
+
+Ports поддерживают синхронные и асинхронные адаптеры через `Awaitable`, тогда как
+application services всегда предоставляют асинхронный интерфейс. Это сохраняет
+быстрый синхронный `node:sqlite` на desktop и не блокирует IndexedDB, OPFS или
+HTTP-адаптер в будущей web-версии.
 
 ### Domain
 
@@ -187,7 +206,7 @@ Electron и Node фиксируются точными версиями. Есл�
 
 Основная база:
 
-`app.getPath('userData')/trackme.sqlite3`
+`app.getPath('userData')/tiempio.sqlite3`
 
 Рядом могут находиться только технические SQLite-файлы WAL и внутренние
 предмиграционные снимки. Пользовательские проекты не создают собственных файлов
@@ -195,6 +214,13 @@ Electron и Node фиксируются точными версиями. Есл�
 
 Настройки хранятся в той же базе. Поэтому пользовательская резервная копия
 содержит данные и настройки в одном файле.
+
+После смены рабочего имени приложение не создаёт молча пустой профиль вместо
+существующих данных. Если новая база отсутствует, startup adapter находит
+предыдущий профиль, создаёт SQLite snapshot во временный файл нового `userData`,
+проверяет его через `quick_check` и атомарно устанавливает как
+`tiempio.sqlite3`. Существующая новая база никогда не перезаписывается, а
+исходный файл остаётся recovery-копией.
 
 ## 5. Открытие базы
 
@@ -287,7 +313,7 @@ Repository не открывает вложенные транзакции са�
 
 Пользователь получает один файл:
 
-`TrackMe-backup-YYYY-MM-DD.trackme`
+`Tiempio-backup-YYYY-MM-DD.tiempio`
 
 Внутри это согласованный SQLite-снимок с таблицей метаданных:
 
@@ -305,7 +331,7 @@ Repository не открывает вложенные транзакции са�
 2. Записи application service кратко ставятся в очередь.
 3. `sqlite.backup()` создаёт снимок во временный файл рядом с назначением.
 4. Снимок открывается read-only и проходит `quick_check` и проверку метаданных.
-5. Временный файл атомарно заменяет выбранный `.trackme`.
+5. Временный файл атомарно заменяет выбранный `.tiempio`.
 6. Очередь записей возобновляется.
 
 Незавершённый или непроверенный файл не объявляется успешной копией.

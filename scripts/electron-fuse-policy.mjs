@@ -68,9 +68,9 @@ if (isEntryPoint) {
 	await checkPackagedElectronFuses(
 		process.argv[2] ??
 			(process.platform === 'darwin'
-				? 'dist/mac/TrackMe.app'
+				? 'dist/mac/Tiempio.app'
 				: process.platform === 'linux'
-					? 'dist/linux-unpacked/trackme'
-					: 'dist/win-unpacked/TrackMe.exe')
+					? 'dist/linux-unpacked/tiempio'
+					: 'dist/win-unpacked/Tiempio.exe')
 	)
 }

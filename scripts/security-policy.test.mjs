@@ -15,7 +15,7 @@ setPermissionRequestHandler
 appProtocolUrl
 `
 const securePreload = `
-contextBridge.exposeInMainWorld('trackme', trackMeApi)
+contextBridge.exposeInMainWorld('tiempio', tiempioApi)
 invokeValidated
 parseIpcResponse
 parseStartupState
@@ -39,7 +39,7 @@ describe('Electron source security policy', () => {
 			secureHtml
 		)
 		assert.ok(errors.some((error) => error.includes('sandbox')))
-		assert.ok(errors.some((error) => error.includes('narrow TrackMe')))
+		assert.ok(errors.some((error) => error.includes('narrow Tiempio')))
 	})
 
 	it('rejects development CSP allowances in production', () => {

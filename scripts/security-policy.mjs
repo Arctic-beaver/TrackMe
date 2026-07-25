@@ -6,8 +6,8 @@ export function validateSecuritySources(mainSource, preloadSource, rendererHtml)
 	const exposedBridgeNames = [
 		...preloadSource.matchAll(/contextBridge\.exposeInMainWorld\(\s*['"`]([^'"`]+)['"`]/gu)
 	].map((match) => match[1])
-	const exposesOnlyTrackMe =
-		exposedBridgeNames.length === 1 && exposedBridgeNames[0] === 'trackme'
+	const exposesOnlyTiempio =
+		exposedBridgeNames.length === 1 && exposedBridgeNames[0] === 'tiempio'
 	const contentSecurityPolicy =
 		rendererHtml.match(
 			/<meta[^>]+http-equiv=["']Content-Security-Policy["'][^>]+content="([^"]+)"/iu
@@ -27,7 +27,7 @@ export function validateSecuritySources(mainSource, preloadSource, rendererHtml)
 			'packaged custom protocol',
 			mainSource.includes('appProtocolUrl') && !mainSource.includes('.loadFile(')
 		],
-		['one narrow TrackMe context bridge', exposesOnlyTrackMe],
+		['one narrow Tiempio context bridge', exposesOnlyTiempio],
 		[
 			'runtime-validated IPC',
 			preloadSource.includes('invokeValidated') &&

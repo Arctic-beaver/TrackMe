@@ -1,6 +1,6 @@
 import { isAbsolute, relative, resolve } from 'node:path'
 
-export const appProtocolScheme = 'trackme'
+export const appProtocolScheme = 'tiempio'
 export const appProtocolHost = 'app'
 export const appProtocolUrl = `${appProtocolScheme}://${appProtocolHost}/index.html`
 

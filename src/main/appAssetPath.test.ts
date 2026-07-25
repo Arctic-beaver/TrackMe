@@ -17,7 +17,7 @@ describe('application asset path', () => {
 			/asset origin/u
 		)
 		assert.throws(
-			() => resolveAppAssetPath('out/renderer', 'trackme://app/%2e%2e/main/index.js'),
+			() => resolveAppAssetPath('out/renderer', 'tiempio://app/%2e%2e/main/index.js'),
 			/asset path/u
 		)
 	})

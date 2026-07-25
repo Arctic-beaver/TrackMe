@@ -56,7 +56,7 @@ export function ApplicationSettingsProvider({
 	const setAppearance = useCallback(
 		(appearance: Appearance): void => {
 			setSettings((current) => ({ ...current, appearance }))
-			commit(window.trackme.settings.setAppearance(appearance))
+			commit(window.tiempio.settings.setAppearance(appearance))
 		},
 		[commit]
 	)
@@ -67,7 +67,7 @@ export function ApplicationSettingsProvider({
 				...current,
 				language: { interfaceLocale }
 			}))
-			commit(window.trackme.settings.setInterfaceLocale(interfaceLocale))
+			commit(window.tiempio.settings.setInterfaceLocale(interfaceLocale))
 		},
 		[commit]
 	)

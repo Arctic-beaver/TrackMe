@@ -188,8 +188,8 @@ export function TaskEditor({
 		try {
 			const saved =
 				sourceTask === null
-					? await window.trackme.tasks.create(taskDraft)
-					: await window.trackme.tasks.update({
+					? await window.tiempio.tasks.create(taskDraft)
+					: await window.tiempio.tasks.update({
 							...taskDraft,
 							id: sourceTask.id,
 							expectedRevision: sourceTask.revision
@@ -200,7 +200,7 @@ export function TaskEditor({
 			setErrorKey(nextErrorKey)
 			if (nextErrorKey === 'task.validation.conflict' && sourceTask !== null) {
 				try {
-					setConflictTask(await window.trackme.tasks.get(sourceTask.id))
+					setConflictTask(await window.tiempio.tasks.get(sourceTask.id))
 				} catch {
 					setErrorKey('task.validation.generic')
 				}
@@ -232,7 +232,7 @@ export function TaskEditor({
 		if (sourceTask === null) return
 		setBusy(true)
 		try {
-			const archived = await window.trackme.tasks.archive({
+			const archived = await window.tiempio.tasks.archive({
 				id: sourceTask.id,
 				expectedRevision: sourceTask.revision
 			})
@@ -261,13 +261,13 @@ export function TaskEditor({
 		try {
 			const saved =
 				projectMode === 'edit' && selectedProject !== null
-					? await window.trackme.projects.update({
+					? await window.tiempio.projects.update({
 							id: selectedProject.id,
 							expectedRevision: selectedProject.revision,
 							name: projectName,
 							description: projectDescription
 						})
-					: await window.trackme.projects.create({
+					: await window.tiempio.projects.create({
 							name: projectName,
 							description: projectDescription
 						})

@@ -1,4 +1,4 @@
-# TrackMe — качество репозитория
+# Tiempio — качество репозитория
 
 **Статус:** обязательно с первого инкремента Этапа 1  
 **Источник:** проверенные quality-настройки Yinkie с устранёнными конфликтами
@@ -26,10 +26,12 @@ break, поэтому `.editorconfig` не удаляет trailing spaces в `*.
    trailing whitespace во всех tracked и ещё не добавленных, но не игнорируемых
    текстовых файлах. Для Markdown разрешён только осознанный hard break из двух
    пробелов.
+5. `scripts/brand-policy.mjs` блокирует повторное появление прежнего рабочего
+   имени в путях и содержимом новых или tracked текстовых файлов.
 
 ## 2. Форматирование
 
-TrackMe сохраняет фактический стиль исходников Yinkie:
+Tiempio сохраняет фактический стиль исходников Yinkie:
 
 - одинарные кавычки;
 - без точек с запятой;
@@ -40,7 +42,7 @@ TrackMe сохраняет фактический стиль исходнико�
 - два пробела для YAML и Markdown.
 
 В Yinkie Prettier использует tabs шириной 4, но корневой `.editorconfig`
-указывает spaces шириной 2. TrackMe не переносит этот конфликт: его
+указывает spaces шириной 2. Tiempio не переносит этот конфликт: его
 `.editorconfig` согласован с фактическим выводом Prettier по расширениям.
 
 ## 3. Обязательные конфиги первого инкремента
@@ -68,6 +70,7 @@ TrackMe сохраняет фактический стиль исходнико�
 {
 	"scripts": {
 		"repo:audit": "node scripts/repository-policy.mjs",
+		"brand:audit": "node scripts/brand-policy.mjs",
 		"format": "prettier --write .",
 		"format:check": "prettier --check .",
 		"lint": "eslint --cache .",
@@ -75,7 +78,7 @@ TrackMe сохраняет фактический стиль исходнико�
 		"i18n:audit": "node scripts/i18n-policy.mjs src/renderer/src",
 		"test": "tsc -p tsconfig.test.json && node --test --experimental-test-isolation=none \".test-out/**/*.test.js\" && npm run test:scripts",
 		"typecheck": "npm run typecheck:node && npm run typecheck:web",
-		"precommit": "npm run repo:audit && npm run format:check && npm run lint && npm run i18n:audit && npm test && npm run typecheck",
+		"precommit": "npm run repo:audit && npm run brand:audit && npm run format:check && npm run lint && npm run i18n:audit && npm test && npm run typecheck",
 		"quality": "npm run precommit"
 	}
 }
@@ -120,6 +123,7 @@ npm run quality
 Изменение готово к commit, когда:
 
 - `npm run repo:audit` проходит;
+- `npm run brand:audit` проходит;
 - `npm run format:check` проходит без автоправок;
 - ESLint не выдаёт ошибок;
 - тесты и оба typecheck проходят;

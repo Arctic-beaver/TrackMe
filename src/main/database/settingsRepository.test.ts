@@ -3,22 +3,22 @@ import { mkdtemp, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { describe, it } from 'node:test'
-import { openTrackMeDatabase } from './database'
-import { SettingsRepository } from './settingsRepository'
+import { openTiempioDatabase } from './database'
+import { SqliteSettingsRepository } from './settingsRepository'
 
 describe('settings repository', () => {
 	it('persists appearance and language in the main SQLite database', async () => {
-		const directory = await mkdtemp(join(tmpdir(), 'trackme-settings-test-'))
+		const directory = await mkdtemp(join(tmpdir(), 'tiempio-settings-test-'))
 		try {
-			const path = join(directory, 'trackme.sqlite3')
-			const firstDatabase = await openTrackMeDatabase(path)
-			const first = new SettingsRepository(firstDatabase)
+			const path = join(directory, 'tiempio.sqlite3')
+			const firstDatabase = await openTiempioDatabase(path)
+			const first = new SqliteSettingsRepository(firstDatabase)
 			first.setAppearance({ family: 'fog-indigo', scheme: 'dark' })
 			first.setInterfaceLocale('es')
 			firstDatabase.close()
 
-			const secondDatabase = await openTrackMeDatabase(path)
-			const restored = new SettingsRepository(secondDatabase).get()
+			const secondDatabase = await openTiempioDatabase(path)
+			const restored = new SqliteSettingsRepository(secondDatabase).get()
 			assert.deepEqual(restored.appearance, {
 				family: 'fog-indigo',
 				scheme: 'dark'
@@ -31,14 +31,14 @@ describe('settings repository', () => {
 	})
 
 	it('repairs an invalid stored preference with defaults', async () => {
-		const database = await openTrackMeDatabase(':memory:')
+		const database = await openTiempioDatabase(':memory:')
 		try {
 			database.connection
 				.prepare(
 					'INSERT INTO application_settings(key, value_json, value_version, updated_at) VALUES (?, ?, ?, ?)'
 				)
 				.run('application', '{"version": 99}', 99, new Date().toISOString())
-			const settings = new SettingsRepository(database).get()
+			const settings = new SqliteSettingsRepository(database).get()
 			assert.equal(settings.appearance.family, 'graphite-navy')
 			assert.equal(settings.language.interfaceLocale, 'system')
 		} finally {

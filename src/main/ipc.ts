@@ -1,4 +1,5 @@
 import { BrowserWindow, ipcMain, type IpcMainInvokeEvent } from 'electron'
+import type { SettingsApplication, TaskApplication } from '../shared/application/services'
 import { ipcChannels, type ApplicationSettings, type StartupState } from '../shared/contracts'
 import {
 	createIpcFailure,
@@ -20,8 +21,6 @@ import {
 	type IpcErrorCode,
 	type RuntimeParser
 } from '../shared/ipcProtocol'
-import type { SettingsRepository } from './database/settingsRepository'
-import type { TaskRepository } from './database/taskRepository'
 import { DomainValidationError, RevisionConflictError } from '../shared/taskDomain'
 
 export class IpcFault extends Error {
@@ -53,7 +52,7 @@ function toIpcError(error: unknown): IpcError {
 	) {
 		return { code: 'STORAGE_BUSY', message: 'Local storage is temporarily busy.' }
 	}
-	console.error('Unhandled TrackMe IPC error:', error)
+	console.error('Unhandled Tiempio IPC error:', error)
 	return { code: 'INTERNAL_ERROR', message: 'The application could not complete the request.' }
 }
 
@@ -66,8 +65,8 @@ function assertTrustedSender(event: IpcMainInvokeEvent, window: BrowserWindow): 
 export interface IpcDependencies {
 	readonly getWindow: () => BrowserWindow | null
 	readonly getStartupState: (window: BrowserWindow) => StartupState
-	readonly settings: SettingsRepository
-	readonly tasks: TaskRepository
+	readonly settings: SettingsApplication
+	readonly tasks: TaskApplication
 	readonly onSettingsChanged: (settings: ApplicationSettings) => void
 	readonly onRendererReady: (window: BrowserWindow) => void
 }
@@ -107,13 +106,13 @@ export function registerIpcHandlers(dependencies: IpcDependencies): () => void {
 		return null
 	})
 	register(ipcChannels.getSettings, parseNull, () => dependencies.settings.get())
-	register(ipcChannels.setAppearance, parseAppearance, (_window, appearance) => {
-		const settings = dependencies.settings.setAppearance(appearance)
+	register(ipcChannels.setAppearance, parseAppearance, async (_window, appearance) => {
+		const settings = await dependencies.settings.setAppearance(appearance)
 		dependencies.onSettingsChanged(settings)
 		return settings
 	})
-	register(ipcChannels.setInterfaceLocale, parseInterfaceLocale, (_window, locale) => {
-		const settings = dependencies.settings.setInterfaceLocale(locale)
+	register(ipcChannels.setInterfaceLocale, parseInterfaceLocale, async (_window, locale) => {
+		const settings = await dependencies.settings.setInterfaceLocale(locale)
 		dependencies.onSettingsChanged(settings)
 		return settings
 	})

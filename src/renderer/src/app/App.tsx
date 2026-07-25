@@ -105,7 +105,7 @@ export function App({ startup }: { readonly startup: StartupState }): React.JSX.
 		const sequence = refreshSequence.current + 1
 		refreshSequence.current = sequence
 		try {
-			const next = await window.trackme.tasks.getBoard()
+			const next = await window.tiempio.tasks.getBoard()
 			if (sequence !== refreshSequence.current) return
 			setSnapshot(next)
 			setOperationError(null)
@@ -124,7 +124,7 @@ export function App({ startup }: { readonly startup: StartupState }): React.JSX.
 	useEffect(() => {
 		if (readinessReported.current) return
 		readinessReported.current = true
-		void window.trackme.app.ready()
+		void window.tiempio.app.ready()
 	}, [])
 
 	useEffect(() => {
@@ -167,7 +167,7 @@ export function App({ startup }: { readonly startup: StartupState }): React.JSX.
 		setOperationBusy(true)
 		setOperationError(null)
 		try {
-			const updated = await window.trackme.tasks.changeStatus({
+			const updated = await window.tiempio.tasks.changeStatus({
 				id: task.id,
 				expectedRevision: task.revision,
 				status

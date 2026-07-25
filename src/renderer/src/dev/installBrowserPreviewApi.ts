@@ -5,7 +5,7 @@ import {
 	type Tag,
 	type Task,
 	type TaskBoardSnapshot,
-	type TrackMeApi
+	type TiempioApi
 } from '../../../shared/contracts'
 import {
 	addLocalDateDays,
@@ -74,7 +74,7 @@ function installPreviewSeed(): void {
 	const createdAt = now()
 	const project: Project = {
 		id: id('project'),
-		name: 'TrackMe',
+		name: 'Tiempio',
 		description: 'A calm local-first planner',
 		revision: 1,
 		createdAt,
@@ -133,7 +133,7 @@ function updateSettings(next: ApplicationSettings): Promise<ApplicationSettings>
 
 export function installBrowserPreviewApi(): void {
 	installPreviewSeed()
-	const api: TrackMeApi = {
+	const api: TiempioApi = {
 		app: {
 			getStartupState: () =>
 				Promise.resolve({
@@ -309,7 +309,7 @@ export function installBrowserPreviewApi(): void {
 			getState: () => Promise.resolve({ maximized: false })
 		}
 	}
-	Object.defineProperty(window, 'trackme', {
+	Object.defineProperty(window, 'tiempio', {
 		value: Object.freeze(api),
 		configurable: true
 	})

@@ -6,20 +6,20 @@ import { join, resolve } from 'node:path'
 
 const defaultExecutable =
 	process.platform === 'darwin'
-		? 'dist/mac/TrackMe.app/Contents/MacOS/TrackMe'
+		? 'dist/mac/Tiempio.app/Contents/MacOS/Tiempio'
 		: process.platform === 'linux'
-			? 'dist/linux-unpacked/trackme'
-			: 'dist/win-unpacked/TrackMe.exe'
+			? 'dist/linux-unpacked/tiempio'
+			: 'dist/win-unpacked/Tiempio.exe'
 
 const executablePath = resolve(process.argv[2] ?? defaultExecutable)
 if (!existsSync(executablePath)) {
 	throw new Error(`Packaged Electron executable is missing: ${executablePath}`)
 }
 
-const profilePath = await mkdtemp(join(tmpdir(), 'trackme-packaged-smoke-'))
+const profilePath = await mkdtemp(join(tmpdir(), 'tiempio-packaged-smoke-'))
 const child = spawn(
 	executablePath,
-	[`--trackme-smoke-user-data=${profilePath}`, '--trackme-packaged-smoke-test'],
+	[`--tiempio-smoke-user-data=${profilePath}`, '--tiempio-packaged-smoke-test'],
 	{ windowsHide: true, stdio: ['ignore', 'ignore', 'pipe'] }
 )
 let stderr = ''

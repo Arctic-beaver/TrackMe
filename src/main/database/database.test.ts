@@ -5,10 +5,10 @@ import { tmpdir } from 'node:os'
 import { describe, it } from 'node:test'
 import { DatabaseSync } from 'node:sqlite'
 import { latestSchemaVersion } from './migrations'
-import { openTrackMeDatabase } from './database'
+import { openTiempioDatabase } from './database'
 
 async function withTemporaryDirectory(run: (path: string) => Promise<void>): Promise<void> {
-	const directory = await mkdtemp(join(tmpdir(), 'trackme-database-test-'))
+	const directory = await mkdtemp(join(tmpdir(), 'tiempio-database-test-'))
 	try {
 		await run(directory)
 	} finally {
@@ -16,11 +16,11 @@ async function withTemporaryDirectory(run: (path: string) => Promise<void>): Pro
 	}
 }
 
-describe('TrackMe database', () => {
+describe('Tiempio database', () => {
 	it('creates the complete foundation schema and reopens it idempotently', async () => {
 		await withTemporaryDirectory(async (directory) => {
-			const path = join(directory, 'trackme.sqlite3')
-			const first = await openTrackMeDatabase(path)
+			const path = join(directory, 'tiempio.sqlite3')
+			const first = await openTiempioDatabase(path)
 			assert.equal(first.schemaVersion, latestSchemaVersion)
 			const tables = first.connection
 				.prepare(
@@ -33,7 +33,7 @@ describe('TrackMe database', () => {
 			assert.ok(tables.includes('recurrence_occurrences'))
 			first.close()
 
-			const second = await openTrackMeDatabase(path)
+			const second = await openTiempioDatabase(path)
 			assert.equal(second.schemaVersion, latestSchemaVersion)
 			assert.equal(
 				Number(
@@ -51,9 +51,9 @@ describe('TrackMe database', () => {
 
 	it('creates a verified SQLite backup', async () => {
 		await withTemporaryDirectory(async (directory) => {
-			const sourcePath = join(directory, 'trackme.sqlite3')
-			const backupPath = join(directory, 'backup', 'TrackMe.trackme')
-			const database = await openTrackMeDatabase(sourcePath)
+			const sourcePath = join(directory, 'tiempio.sqlite3')
+			const backupPath = join(directory, 'backup', 'Tiempio.tiempio')
+			const database = await openTiempioDatabase(sourcePath)
 			await database.backupTo(backupPath)
 			database.close()
 
@@ -69,14 +69,14 @@ describe('TrackMe database', () => {
 
 	it('rejects changed migration history', async () => {
 		await withTemporaryDirectory(async (directory) => {
-			const path = join(directory, 'trackme.sqlite3')
-			const database = await openTrackMeDatabase(path)
+			const path = join(directory, 'tiempio.sqlite3')
+			const database = await openTiempioDatabase(path)
 			database.connection
 				.prepare('UPDATE schema_migrations SET checksum = ? WHERE version = 1')
 				.run('changed')
 			database.close()
 
-			await assert.rejects(openTrackMeDatabase(path), /does not match its checksum/u)
+			await assert.rejects(openTiempioDatabase(path), /does not match its checksum/u)
 		})
 	})
 })

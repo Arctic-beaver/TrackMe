@@ -3,8 +3,8 @@ import { mkdtemp, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { describe, it } from 'node:test'
-import { openTrackMeDatabase } from './database'
-import { TaskRepository } from './taskRepository'
+import { openTiempioDatabase } from './database'
+import { SqliteTaskRepository } from './taskRepository'
 
 function ids(): () => string {
 	let value = 0
@@ -13,15 +13,15 @@ function ids(): () => string {
 
 describe('task repository', () => {
 	it('creates and edits a task transactionally with normalized tags and activity', async () => {
-		const database = await openTrackMeDatabase(':memory:')
+		const database = await openTiempioDatabase(':memory:')
 		try {
-			const repository = new TaskRepository(database, {
+			const repository = new SqliteTaskRepository(database, {
 				createId: ids(),
 				now: () => '2026-07-23T10:00:00.000Z',
 				currentLocalDate: () => '2026-07-23'
 			})
 			const project = repository.createProject({
-				name: 'TrackMe',
+				name: 'Tiempio',
 				description: 'https://example.test'
 			})
 			const created = repository.create({
@@ -65,9 +65,9 @@ describe('task repository', () => {
 	})
 
 	it('rejects stale revisions and archives without deleting content', async () => {
-		const database = await openTrackMeDatabase(':memory:')
+		const database = await openTiempioDatabase(':memory:')
 		try {
-			const repository = new TaskRepository(database, {
+			const repository = new SqliteTaskRepository(database, {
 				createId: ids(),
 				now: () => '2026-07-23T10:00:00.000Z',
 				currentLocalDate: () => '2026-07-23'
@@ -111,10 +111,10 @@ describe('task repository', () => {
 	})
 
 	it('updates projects optimistically and preserves planned and completion invariants', async () => {
-		const database = await openTrackMeDatabase(':memory:')
+		const database = await openTiempioDatabase(':memory:')
 		try {
 			let localDate = '2026-07-23'
-			const repository = new TaskRepository(database, {
+			const repository = new SqliteTaskRepository(database, {
 				createId: ids(),
 				now: () => '2026-07-23T10:00:00.000Z',
 				currentLocalDate: () => localDate
@@ -176,9 +176,9 @@ describe('task repository', () => {
 	})
 
 	it('uses focused status updates and keeps archive transitions idempotent', async () => {
-		const database = await openTrackMeDatabase(':memory:')
+		const database = await openTiempioDatabase(':memory:')
 		try {
-			const repository = new TaskRepository(database, {
+			const repository = new SqliteTaskRepository(database, {
 				createId: ids(),
 				now: () => '2026-07-23T10:00:00.000Z',
 				currentLocalDate: () => '2026-07-23'
@@ -246,10 +246,10 @@ describe('task repository', () => {
 	})
 
 	it('returns archived tasks in bounded pages', async () => {
-		const database = await openTrackMeDatabase(':memory:')
+		const database = await openTiempioDatabase(':memory:')
 		try {
 			let timestamp = 0
-			const repository = new TaskRepository(database, {
+			const repository = new SqliteTaskRepository(database, {
 				createId: ids(),
 				now: () => new Date(Date.UTC(2026, 6, 23, 10, 0, timestamp++)).toISOString(),
 				currentLocalDate: () => '2026-07-23'
@@ -282,11 +282,11 @@ describe('task repository', () => {
 	})
 
 	it('keeps created tasks after the database is closed and reopened', async () => {
-		const directory = await mkdtemp(join(tmpdir(), 'trackme-task-persistence-test-'))
+		const directory = await mkdtemp(join(tmpdir(), 'tiempio-task-persistence-test-'))
 		try {
-			const path = join(directory, 'trackme.sqlite3')
-			const firstDatabase = await openTrackMeDatabase(path)
-			const firstRepository = new TaskRepository(firstDatabase, {
+			const path = join(directory, 'tiempio.sqlite3')
+			const firstDatabase = await openTiempioDatabase(path)
+			const firstRepository = new SqliteTaskRepository(firstDatabase, {
 				createId: ids(),
 				now: () => '2026-07-23T10:00:00.000Z',
 				currentLocalDate: () => '2026-07-23'
@@ -304,8 +304,8 @@ describe('task repository', () => {
 			})
 			firstDatabase.close()
 
-			const secondDatabase = await openTrackMeDatabase(path)
-			const restored = new TaskRepository(secondDatabase).getBoard().tasks
+			const secondDatabase = await openTiempioDatabase(path)
+			const restored = new SqliteTaskRepository(secondDatabase).getBoard().tasks
 			assert.equal(restored.length, 1)
 			assert.equal(restored[0]?.title, 'Persist across launch')
 			assert.equal(restored[0]?.description, 'Stored locally')

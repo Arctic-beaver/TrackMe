@@ -1,5 +1,5 @@
 import { contextBridge, ipcRenderer } from 'electron'
-import { ipcChannels, type TrackMeApi } from '../shared/contracts'
+import { ipcChannels, type TiempioApi } from '../shared/contracts'
 import {
 	createIpcRequest,
 	parseArchivedTaskPage,
@@ -37,7 +37,7 @@ async function invokeEmpty(channel: string): Promise<void> {
 	await invokeValidated(channel, null, parseNull)
 }
 
-const trackMeApi: TrackMeApi = {
+const tiempioApi: TiempioApi = {
 	app: {
 		getStartupState: () =>
 			invokeValidated(ipcChannels.getStartupState, null, parseStartupState),
@@ -101,5 +101,5 @@ const trackMeApi: TrackMeApi = {
 	}
 }
 
-if (!process.contextIsolated) throw new Error('TrackMe requires Electron context isolation.')
-contextBridge.exposeInMainWorld('trackme', trackMeApi)
+if (!process.contextIsolated) throw new Error('Tiempio requires Electron context isolation.')
+contextBridge.exposeInMainWorld('tiempio', tiempioApi)

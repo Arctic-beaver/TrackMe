@@ -202,7 +202,7 @@ export function createDefaultApplicationSettings(): ApplicationSettings {
 	})
 }
 
-export interface TrackMeApi {
+export interface TiempioApi {
 	readonly app: {
 		getStartupState(): Promise<StartupState>
 		ready(): Promise<void>

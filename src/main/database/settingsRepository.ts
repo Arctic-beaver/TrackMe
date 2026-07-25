@@ -4,8 +4,9 @@ import {
 	type ApplicationSettings,
 	type InterfaceLocale
 } from '../../shared/contracts'
+import type { SettingsRepositoryPort } from '../../shared/application/ports'
 import { parseApplicationSettings } from '../../shared/ipcProtocol'
-import type { TrackMeDatabase } from './database'
+import type { TiempioDatabase } from './database'
 
 const settingsKey = 'application'
 
@@ -17,10 +18,10 @@ function immutableSettings(settings: ApplicationSettings): ApplicationSettings {
 	})
 }
 
-export class SettingsRepository {
-	readonly #database: TrackMeDatabase
+export class SqliteSettingsRepository implements SettingsRepositoryPort {
+	readonly #database: TiempioDatabase
 
-	constructor(database: TrackMeDatabase) {
+	constructor(database: TiempioDatabase) {
 		this.#database = database
 	}
 

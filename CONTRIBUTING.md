@@ -1,4 +1,4 @@
-# Contributing to TrackMe
+# Contributing to Tiempio
 
 Read the contracts in `docs/architecture`, `docs/design/UI-DIRECTION.md` and
 `docs/QUALITY.md` before changing production code.

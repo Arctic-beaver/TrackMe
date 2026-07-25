@@ -1,4 +1,4 @@
-# TrackMe — отчёт по Этапу 1
+# Tiempio — отчёт по Этапу 1
 
 **Статус:** завершён  
 **Дата:** 23 июля 2026  
@@ -15,7 +15,7 @@
 
 - Electron 43, React 19, TypeScript 5.9, Vite 7 и electron-vite 5;
 - безопасное разделение main, preload и renderer;
-- узкий типизированный IPC-мост `window.trackme` с runtime-валидацией;
+- узкий типизированный IPC-мост `window.tiempio` с runtime-валидацией;
 - local-first SQLite через встроенный `node:sqlite`;
 - первая идемпотентная миграция полной MVP-модели;
 - проверяемое резервное копирование базы и контроль истории миграций;
@@ -75,7 +75,7 @@ Renderer запускается с:
 - `webSecurity: true`;
 - запретом внешних окон, навигации, webview и permissions;
 - production CSP без inline script/style и WebSocket-доступа;
-- собственным привилегированным протоколом `trackme://app`.
+- собственным привилегированным протоколом `tiempio://app`.
 
 Electron fuses запрещают RunAsNode, Node options и CLI inspect, разрешают только
 загрузку из ASAR и включают ASAR integrity validation.

@@ -54,7 +54,7 @@ const task = {
 } as const
 const project = {
 	id: 'project-1',
-	name: 'TrackMe',
+	name: 'Tiempio',
 	description: '',
 	revision: 1,
 	createdAt: '2026-07-23T10:00:00.000Z',
