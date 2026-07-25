@@ -1,4 +1,4 @@
-import { useId, useState } from 'react'
+import { useState } from 'react'
 import { Archive, FolderPlus, RefreshCw, Save, X } from 'lucide-react'
 import type {
 	Project,
@@ -12,6 +12,8 @@ import { IpcRemoteError } from '../../../shared/ipcProtocol'
 import { formatLocalDate } from '../../../shared/localization'
 import { calculatePreferredStart } from '../../../shared/taskDomain'
 import { useLocalization } from '../localization/useLocalization'
+import { ConfirmDialog } from './ConfirmDialog'
+import { CustomSelect, type CustomSelectOption } from './CustomSelect'
 
 interface EditorDraft {
 	readonly title: string
@@ -84,7 +86,6 @@ export function TaskEditor({
 	readonly onClose: () => void
 }): React.JSX.Element {
 	const { locale, t } = useLocalization()
-	const tagSuggestionsId = useId()
 	const [sourceTask, setSourceTask] = useState(task)
 	const initialDraft = draftFromTask(task, localDate)
 	const [draft, setDraft] = useState(initialDraft)
@@ -103,6 +104,7 @@ export function TaskEditor({
 	const [projectName, setProjectName] = useState('')
 	const [projectDescription, setProjectDescription] = useState('')
 	const [projectError, setProjectError] = useState(false)
+	const [discardOpen, setDiscardOpen] = useState(false)
 	const selectedProject = projects.find((project) => project.id === draft.projectId) ?? null
 	const automaticStart = (() => {
 		try {
@@ -112,9 +114,42 @@ export function TaskEditor({
 		}
 	})()
 	const dirty = JSON.stringify(draft) !== baseline
+	const statusOptions: readonly CustomSelectOption<TaskStatus>[] = [
+		{ value: 'todo', label: t('task.status.todo') },
+		{ value: 'planned', label: t('task.status.planned') },
+		{ value: 'in_progress', label: t('task.status.inProgress') },
+		{ value: 'done', label: t('task.status.done') }
+	]
+	const projectOptions: readonly CustomSelectOption<string>[] = [
+		{ value: '', label: t('task.project.none') },
+		...projects.map((project) => ({ value: project.id, label: project.name }))
+	]
+	const selectedTagNames = new Set(
+		draft.tagNames
+			.split(',')
+			.map((name) => name.trim().toLocaleLowerCase())
+			.filter((name) => name.length > 0)
+	)
+	const availableTags = tags.filter(
+		(tag) => !selectedTagNames.has(tag.name.trim().toLocaleLowerCase())
+	)
 
 	const close = (): void => {
-		if (!dirty || window.confirm(t('task.editor.discardConfirm'))) onClose()
+		if (!dirty) onClose()
+		else setDiscardOpen(true)
+	}
+
+	const addTag = (name: string): void => {
+		setDraft((current) => {
+			const currentNames = current.tagNames
+				.split(',')
+				.map((tagName) => tagName.trim())
+				.filter((tagName) => tagName.length > 0)
+			return {
+				...current,
+				tagNames: [...currentNames, name].join(', ')
+			}
+		})
 	}
 
 	const submit = async (): Promise<void> => {
@@ -271,7 +306,10 @@ export function TaskEditor({
 							value={draft.title}
 							placeholder={t('task.placeholder.title')}
 							onChange={(event) =>
-								setDraft((current) => ({ ...current, title: event.target.value }))
+								setDraft((current) => ({
+									...current,
+									title: event.target.value
+								}))
 							}
 						/>
 					</label>
@@ -289,23 +327,20 @@ export function TaskEditor({
 							}
 						/>
 					</label>
-					<label className="field">
+					<div className="field">
 						<span>{t('task.field.status')}</span>
-						<select
+						<CustomSelect
+							ariaLabel={t('task.field.status')}
 							value={draft.status}
-							onChange={(event) =>
+							options={statusOptions}
+							onChange={(status) =>
 								setDraft((current) => ({
 									...current,
-									status: event.target.value as TaskStatus
+									status
 								}))
 							}
-						>
-							<option value="todo">{t('task.status.todo')}</option>
-							<option value="planned">{t('task.status.planned')}</option>
-							<option value="in_progress">{t('task.status.inProgress')}</option>
-							<option value="done">{t('task.status.done')}</option>
-						</select>
-					</label>
+						/>
+					</div>
 					<label className="field">
 						<span>{t('task.field.estimate')}</span>
 						<input
@@ -326,7 +361,10 @@ export function TaskEditor({
 							type="date"
 							value={draft.dueDate}
 							onChange={(event) =>
-								setDraft((current) => ({ ...current, dueDate: event.target.value }))
+								setDraft((current) => ({
+									...current,
+									dueDate: event.target.value
+								}))
 							}
 						/>
 					</label>
@@ -382,23 +420,17 @@ export function TaskEditor({
 					<div className="field project-field">
 						<span>{t('task.field.project')}</span>
 						<div className="field-actions">
-							<select
-								aria-label={t('task.field.project')}
+							<CustomSelect
+								ariaLabel={t('task.field.project')}
 								value={draft.projectId}
-								onChange={(event) =>
+								options={projectOptions}
+								onChange={(projectId) =>
 									setDraft((current) => ({
 										...current,
-										projectId: event.target.value
+										projectId
 									}))
 								}
-							>
-								<option value="">{t('task.project.none')}</option>
-								{projects.map((project) => (
-									<option key={project.id} value={project.id}>
-										{project.name}
-									</option>
-								))}
-							</select>
+							/>
 							<button type="button" onClick={() => beginProject('create')}>
 								<FolderPlus aria-hidden="true" />
 								{t('actions.newProject')}
@@ -458,7 +490,6 @@ export function TaskEditor({
 					<label className="field field-wide">
 						<span>{t('task.field.tags')}</span>
 						<input
-							list={tagSuggestionsId}
 							value={draft.tagNames}
 							placeholder={t('task.placeholder.tags')}
 							onChange={(event) =>
@@ -469,11 +500,19 @@ export function TaskEditor({
 							}
 						/>
 						<small>{t('task.tagsHelp')}</small>
-						<datalist id={tagSuggestionsId}>
-							{tags.map((tag) => (
-								<option key={tag.id} value={tag.name} />
-							))}
-						</datalist>
+						{availableTags.length === 0 ? null : (
+							<div className="tag-suggestions" aria-label={t('task.tagsSuggestions')}>
+								{availableTags.map((tag) => (
+									<button
+										type="button"
+										key={tag.id}
+										onClick={() => addTag(tag.name)}
+									>
+										{tag.name}
+									</button>
+								))}
+							</div>
+						)}
 					</label>
 					{errorKey === null ? null : (
 						<div className="form-error field-wide" role="alert">
@@ -516,6 +555,15 @@ export function TaskEditor({
 					</footer>
 				</form>
 			</div>
+			{discardOpen ? (
+				<ConfirmDialog
+					onConfirm={() => {
+						setDiscardOpen(false)
+						onClose()
+					}}
+					onCancel={() => setDiscardOpen(false)}
+				/>
+			) : null}
 		</dialog>
 	)
 }

@@ -1,11 +1,6 @@
 import { useEffect, useRef } from 'react'
-import { X } from 'lucide-react'
-import {
-	colorSchemes,
-	interfaceLocales,
-	type ColorScheme,
-	type InterfaceLocale
-} from '../../../shared/contracts'
+import { Palette, X } from 'lucide-react'
+import { colorSchemes, type ColorScheme } from '../../../shared/contracts'
 import { themeRegistry } from '../../../shared/themeRegistry'
 import type { LocalizationKey } from '../../../shared/localization'
 import { useLocalization } from '../localization/useLocalization'
@@ -17,18 +12,10 @@ const schemeKeys: Readonly<Record<ColorScheme, LocalizationKey>> = {
 	dark: 'appearance.scheme.dark'
 }
 
-const localeKeys: Readonly<Record<InterfaceLocale, LocalizationKey>> = {
-	system: 'appearance.locale.system',
-	ru: 'appearance.locale.russian',
-	en: 'appearance.locale.english',
-	es: 'appearance.locale.spanish'
-}
-
 export function AppearanceDialog({ onClose }: { readonly onClose: () => void }): React.JSX.Element {
 	const dialog = useRef<HTMLDialogElement>(null)
 	const { t } = useLocalization()
-	const { settings, saveError, clearSaveError, setAppearance, setInterfaceLocale } =
-		useApplicationSettings()
+	const { settings, saveError, clearSaveError, setAppearance } = useApplicationSettings()
 
 	useEffect(() => {
 		dialog.current?.showModal()
@@ -37,7 +24,7 @@ export function AppearanceDialog({ onClose }: { readonly onClose: () => void }):
 	return (
 		<dialog
 			ref={dialog}
-			className="appearance-dialog"
+			className="settings-dialog appearance-dialog"
 			aria-labelledby="appearance-title"
 			onCancel={(event) => {
 				event.preventDefault()
@@ -47,9 +34,12 @@ export function AppearanceDialog({ onClose }: { readonly onClose: () => void }):
 				if (event.currentTarget === event.target) onClose()
 			}}
 		>
-			<div className="appearance-panel">
-				<header className="appearance-header">
+			<div className="settings-panel appearance-panel">
+				<header className="settings-header appearance-header">
 					<div>
+						<span className="settings-heading-icon" aria-hidden="true">
+							<Palette />
+						</span>
 						<h2 id="appearance-title">{t('appearance.title')}</h2>
 						<p>{t('appearance.description')}</p>
 					</div>
@@ -105,22 +95,6 @@ export function AppearanceDialog({ onClose }: { readonly onClose: () => void }):
 								}
 							>
 								{t(schemeKeys[scheme])}
-							</button>
-						))}
-					</div>
-				</section>
-
-				<section className="appearance-section">
-					<h3>{t('appearance.interfaceLanguage')}</h3>
-					<div className="segmented-control locale-control">
-						{interfaceLocales.map((locale) => (
-							<button
-								type="button"
-								key={locale}
-								aria-pressed={settings.language.interfaceLocale === locale}
-								onClick={() => setInterfaceLocale(locale)}
-							>
-								{t(localeKeys[locale])}
 							</button>
 						))}
 					</div>

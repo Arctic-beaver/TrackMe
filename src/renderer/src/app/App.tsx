@@ -23,6 +23,8 @@ import { todayLocalDate } from '../../../shared/taskDomain'
 import { useLocalization } from '../localization/useLocalization'
 import { ArchivedTasksDialog } from './ArchivedTasksDialog'
 import { AppearanceDialog } from './AppearanceDialog'
+import { CustomSelect } from './CustomSelect'
+import { LanguageDialog } from './LanguageDialog'
 import { TaskEditor } from './TaskEditor'
 import { TitleBar } from './TitleBar'
 import { TodayBoard } from './TodayBoard'
@@ -84,6 +86,7 @@ export function App({ startup }: { readonly startup: StartupState }): React.JSX.
 	const { locale, t } = useLocalization()
 	const [section, setSection] = useState<NavigationSection>('today')
 	const [appearanceOpen, setAppearanceOpen] = useState(false)
+	const [languageOpen, setLanguageOpen] = useState(false)
 	const [editorOpen, setEditorOpen] = useState(false)
 	const [editingTask, setEditingTask] = useState<Task | null>(null)
 	const [archivedOpen, setArchivedOpen] = useState(false)
@@ -233,6 +236,20 @@ export function App({ startup }: { readonly startup: StartupState }): React.JSX.
 				(tagFilter.length === 0 || task.tags.some((tag) => tag.id === tagFilter))
 		) ?? []
 	const hasActiveFilters = projectFilter.length > 0 || tagFilter.length > 0
+	const projectFilterOptions = [
+		{ value: '', label: t('filters.projects') },
+		...(snapshot?.projects.map((project) => ({
+			value: project.id,
+			label: project.name
+		})) ?? [])
+	]
+	const tagFilterOptions = [
+		{ value: '', label: t('filters.tags') },
+		...(snapshot?.tags.map((tag) => ({
+			value: tag.id,
+			label: tag.name
+		})) ?? [])
+	]
 
 	return (
 		<div className="app-shell">
@@ -243,6 +260,7 @@ export function App({ startup }: { readonly startup: StartupState }): React.JSX.
 					platform={startup.platform}
 					initialMaximized={startup.windowMaximized}
 					onOpenAppearance={() => setAppearanceOpen(true)}
+					onOpenLanguage={() => setLanguageOpen(true)}
 					onCreateTask={openCreate}
 				/>
 				<nav className="primary-navigation" aria-label={t('navigation.primary')}>
@@ -273,36 +291,26 @@ export function App({ startup }: { readonly startup: StartupState }): React.JSX.
 				</section>
 
 				<div className="filter-row">
-					<label className="filter-chip">
+					<div className="filter-chip">
 						<FolderKanban aria-hidden="true" />
-						<span className="visually-hidden">{t('filters.projectLabel')}</span>
-						<select
+						<CustomSelect
+							className="filter-select"
+							ariaLabel={t('filters.projectLabel')}
 							value={projectFilter}
-							onChange={(event) => setProjectFilter(event.target.value)}
-						>
-							<option value="">{t('filters.projects')}</option>
-							{snapshot?.projects.map((project) => (
-								<option key={project.id} value={project.id}>
-									{project.name}
-								</option>
-							))}
-						</select>
-					</label>
-					<label className="filter-chip">
+							options={projectFilterOptions}
+							onChange={setProjectFilter}
+						/>
+					</div>
+					<div className="filter-chip">
 						<Tag aria-hidden="true" />
-						<span className="visually-hidden">{t('filters.tagLabel')}</span>
-						<select
+						<CustomSelect
+							className="filter-select"
+							ariaLabel={t('filters.tagLabel')}
 							value={tagFilter}
-							onChange={(event) => setTagFilter(event.target.value)}
-						>
-							<option value="">{t('filters.tags')}</option>
-							{snapshot?.tags.map((tag) => (
-								<option key={tag.id} value={tag.id}>
-									{tag.name}
-								</option>
-							))}
-						</select>
-					</label>
+							options={tagFilterOptions}
+							onChange={setTagFilter}
+						/>
+					</div>
 					{hasActiveFilters ? (
 						<button
 							type="button"
@@ -360,6 +368,7 @@ export function App({ startup }: { readonly startup: StartupState }): React.JSX.
 			</main>
 
 			{appearanceOpen ? <AppearanceDialog onClose={() => setAppearanceOpen(false)} /> : null}
+			{languageOpen ? <LanguageDialog onClose={() => setLanguageOpen(false)} /> : null}
 			{editorOpen && snapshot !== null ? (
 				<TaskEditor
 					task={editingTask}

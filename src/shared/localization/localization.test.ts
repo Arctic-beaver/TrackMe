@@ -52,6 +52,21 @@ describe('localization', () => {
 		)
 	})
 
+	it('uses task-focused Russian and Spanish interface copy', () => {
+		assert.equal(translate('ru', 'task.status.todo'), 'К выполнению')
+		assert.equal(translate('ru', 'task.placeholder.title'), 'Что нужно сделать?')
+		assert.equal(translate('ru', 'task.editor.discardAction'), 'Не сохранять')
+		assert.equal(translate('es', 'task.status.todo'), 'Por hacer')
+		assert.equal(translate('es', 'task.placeholder.title'), '¿Qué hay que hacer?')
+		assert.equal(translate('es', 'task.editor.continueEditing'), 'Seguir editando')
+	})
+
+	it('keeps language settings independent from theme settings', () => {
+		assert.equal(translate('en', 'actions.openAppearance'), 'Themes')
+		assert.equal(translate('ru', 'language.action'), 'Язык')
+		assert.equal(translate('es', 'language.title'), 'Idioma de la interfaz')
+	})
+
 	it('formats the same local date in every supported language', () => {
 		const date = new Date(2026, 6, 23, 12)
 		assert.match(formatCalendarDate('en', date), /23 July/u)

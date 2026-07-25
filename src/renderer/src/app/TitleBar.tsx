@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Copy, Minus, Palette, Plus, Sparkles, Square, X } from 'lucide-react'
+import { Copy, Languages, Minus, Palette, Plus, Sparkles, Square, X } from 'lucide-react'
 import type { DesktopPlatform } from '../../../shared/contracts'
 import { useLocalization } from '../localization/useLocalization'
 
@@ -7,11 +7,13 @@ export function TitleBar({
 	platform,
 	initialMaximized,
 	onOpenAppearance,
+	onOpenLanguage,
 	onCreateTask
 }: {
 	readonly platform: DesktopPlatform
 	readonly initialMaximized: boolean
 	readonly onOpenAppearance: () => void
+	readonly onOpenLanguage: () => void
 	readonly onCreateTask: () => void
 }): React.JSX.Element {
 	const { t } = useLocalization()
@@ -38,6 +40,15 @@ export function TitleBar({
 					aria-label={t('actions.openAppearance')}
 				>
 					<Palette aria-hidden="true" />
+				</button>
+				<button
+					type="button"
+					className="title-setting-button"
+					onClick={onOpenLanguage}
+					aria-label={t('actions.openLanguage')}
+				>
+					<Languages aria-hidden="true" />
+					<span>{t('language.action')}</span>
 				</button>
 				<button
 					type="button"
