@@ -1,0 +1,75 @@
+:root {
+	--scrollbar-size: 0.8rem;
+	--scrollbar-track: color-mix(in srgb, var(--app-background) 44%, transparent);
+	--scrollbar-thumb: color-mix(in srgb, var(--border) 70%, transparent);
+	--scrollbar-thumb-hover: color-mix(in srgb, var(--accent) 66%, var(--border));
+	--scrollbar-thumb-active: var(--accent);
+	--scrollbar-corner: color-mix(in srgb, var(--app-background) 84%, transparent);
+}
+
+* {
+	scrollbar-width: thin;
+	scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
+}
+
+@supports selector(::-webkit-scrollbar) {
+	* {
+		scrollbar-width: auto;
+		scrollbar-color: auto;
+	}
+}
+
+*::-webkit-scrollbar {
+	width: var(--scrollbar-size);
+	height: var(--scrollbar-size);
+}
+
+*::-webkit-scrollbar-track {
+	border-radius: 999rem;
+	background: var(--scrollbar-track);
+}
+
+*::-webkit-scrollbar-thumb {
+	min-width: 2.5rem;
+	min-height: 2.5rem;
+	border: 0.18rem solid transparent;
+	border-radius: 999rem;
+	background: var(--scrollbar-thumb);
+	background-clip: padding-box;
+	box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--text) 8%, transparent);
+}
+
+*::-webkit-scrollbar-thumb:hover {
+	background: var(--scrollbar-thumb-hover);
+	background-clip: padding-box;
+}
+
+*::-webkit-scrollbar-thumb:active {
+	background: var(--scrollbar-thumb-active);
+	background-clip: padding-box;
+}
+
+*::-webkit-scrollbar-corner {
+	background: var(--scrollbar-corner);
+}
+
+*::-webkit-scrollbar-button {
+	display: none;
+	width: 0;
+	height: 0;
+}
+
+@media (forced-colors: active) {
+	* {
+		scrollbar-color: ButtonText Canvas;
+	}
+
+	*::-webkit-scrollbar-track {
+		background: Canvas;
+	}
+
+	*::-webkit-scrollbar-thumb {
+		border-color: Canvas;
+		background: ButtonText;
+	}
+}

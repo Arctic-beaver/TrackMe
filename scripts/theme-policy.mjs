@@ -105,16 +105,76 @@ export function auditProductionThemes(css) {
 	return { failures, schemes: parsed }
 }
 
+export function auditScrollbarSystem(entryCss, scrollbarCss) {
+	const failures = []
+	const imports = entryCss.match(/@import\s+['"]\.\/scrollbars\.css['"]\s*;/gu) ?? []
+	const requiredTokens = [
+		'scrollbar-size',
+		'scrollbar-track',
+		'scrollbar-thumb',
+		'scrollbar-thumb-hover',
+		'scrollbar-thumb-active',
+		'scrollbar-corner'
+	]
+	const requiredRules = [
+		['global Firefox width', /\*\s*\{[\s\S]*?scrollbar-width:/u],
+		['global Firefox colors', /\*\s*\{[\s\S]*?scrollbar-color:/u],
+		[
+			'Chromium standard-property reset',
+			/@supports\s+selector\(::-webkit-scrollbar\)\s*\{[\s\S]*?scrollbar-width:\s*auto;[\s\S]*?scrollbar-color:\s*auto;/u
+		],
+		['global WebKit scrollbar', /\*::-webkit-scrollbar\s*\{/u],
+		['global WebKit track', /\*::-webkit-scrollbar-track\s*\{/u],
+		['global WebKit thumb', /\*::-webkit-scrollbar-thumb\s*\{/u],
+		['WebKit thumb hover state', /\*::-webkit-scrollbar-thumb:hover\s*\{/u],
+		['WebKit thumb active state', /\*::-webkit-scrollbar-thumb:active\s*\{/u],
+		['WebKit corner', /\*::-webkit-scrollbar-corner\s*\{/u],
+		['forced colors fallback', /@media\s*\(forced-colors:\s*active\)/u]
+	]
+
+	if (imports.length !== 1) {
+		failures.push('main.css must import scrollbars.css exactly once')
+	}
+	if (!entryCss.trimStart().startsWith("@import './scrollbars.css';")) {
+		failures.push('scrollbars.css must be the first main.css import')
+	}
+	if (/::-webkit-scrollbar|scrollbar-(?:color|width)\s*:/u.test(entryCss)) {
+		failures.push('scrollbar implementation must remain in scrollbars.css')
+	}
+	for (const token of requiredTokens) {
+		if (!new RegExp(`--${token}:`, 'u').test(scrollbarCss)) {
+			failures.push(`scrollbars.css: --${token} is missing`)
+		}
+	}
+	for (const [name, rule] of requiredRules) {
+		if (!rule.test(scrollbarCss)) failures.push(`scrollbars.css: ${name} is missing`)
+	}
+
+	return { failures }
+}
+
 const invokedPath = process.argv[1]
 if (invokedPath !== undefined && fileURLToPath(import.meta.url) === invokedPath) {
 	const cssPath =
 		process.argv[2] ??
 		fileURLToPath(new URL('../src/renderer/src/styles/main.css', import.meta.url))
-	const result = auditProductionThemes(await readFile(cssPath, 'utf8'))
-	if (result.failures.length > 0) {
-		for (const failure of result.failures) console.error(`FAIL ${failure}`)
+	const scrollbarPath = fileURLToPath(
+		new URL('../src/renderer/src/styles/scrollbars.css', import.meta.url)
+	)
+	const [entryCss, scrollbarCss] = await Promise.all([
+		readFile(cssPath, 'utf8'),
+		readFile(scrollbarPath, 'utf8')
+	])
+	const failures = [
+		...auditProductionThemes(entryCss).failures,
+		...auditScrollbarSystem(entryCss, scrollbarCss).failures
+	]
+	if (failures.length > 0) {
+		for (const failure of failures) console.error(`FAIL ${failure}`)
 		process.exitCode = 1
 	} else {
-		console.log('PASS four complete light/dark themes, contrast and Liquid Glass policy')
+		console.log(
+			'PASS four complete light/dark themes, contrast, Liquid Glass and global scrollbar policy'
+		)
 	}
 }

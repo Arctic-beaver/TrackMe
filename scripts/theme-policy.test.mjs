@@ -1,10 +1,14 @@
 import assert from 'node:assert/strict'
 import { readFile } from 'node:fs/promises'
 import { describe, it } from 'node:test'
-import { auditProductionThemes, contrastRatio } from './theme-policy.mjs'
+import { auditProductionThemes, auditScrollbarSystem, contrastRatio } from './theme-policy.mjs'
 
 const productionCss = await readFile(
 	new URL('../src/renderer/src/styles/main.css', import.meta.url),
+	'utf8'
+)
+const scrollbarCss = await readFile(
+	new URL('../src/renderer/src/styles/scrollbars.css', import.meta.url),
 	'utf8'
 )
 
@@ -32,5 +36,18 @@ describe('production theme policy', () => {
 	it('uses WCAG relative luminance', () => {
 		assert.equal(contrastRatio('#000000', '#ffffff'), 21)
 		assert.ok(contrastRatio('#777777', '#ffffff') < 4.5)
+	})
+
+	it('keeps one global themed scrollbar entry point', () => {
+		assert.deepEqual(auditScrollbarSystem(productionCss, scrollbarCss).failures, [])
+	})
+
+	it('rejects scrollbar rules outside the centralized stylesheet', () => {
+		const invalidCss = `${productionCss}\n.panel { scrollbar-width: auto; }`
+		assert.ok(
+			auditScrollbarSystem(invalidCss, scrollbarCss).failures.includes(
+				'scrollbar implementation must remain in scrollbars.css'
+			)
+		)
 	})
 })
