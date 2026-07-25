@@ -1,10 +1,10 @@
-import { useEffect, useRef } from 'react'
 import { Palette, X } from 'lucide-react'
 import { colorSchemes, type ColorScheme } from '../../../shared/contracts'
 import { themeRegistry } from '../../../shared/themeRegistry'
 import type { LocalizationKey } from '../../../shared/localization'
 import { useLocalization } from '../localization/useLocalization'
 import { useApplicationSettings } from './applicationSettingsContext'
+import { useModalDialog } from './useModalDialog'
 
 const schemeKeys: Readonly<Record<ColorScheme, LocalizationKey>> = {
 	system: 'appearance.scheme.system',
@@ -13,13 +13,9 @@ const schemeKeys: Readonly<Record<ColorScheme, LocalizationKey>> = {
 }
 
 export function AppearanceDialog({ onClose }: { readonly onClose: () => void }): React.JSX.Element {
-	const dialog = useRef<HTMLDialogElement>(null)
+	const dialog = useModalDialog()
 	const { t } = useLocalization()
 	const { settings, saveError, clearSaveError, setAppearance } = useApplicationSettings()
-
-	useEffect(() => {
-		dialog.current?.showModal()
-	}, [])
 
 	return (
 		<dialog
@@ -28,6 +24,12 @@ export function AppearanceDialog({ onClose }: { readonly onClose: () => void }):
 			aria-labelledby="appearance-title"
 			onCancel={(event) => {
 				event.preventDefault()
+				onClose()
+			}}
+			onKeyDown={(event) => {
+				if (event.key !== 'Escape') return
+				event.preventDefault()
+				event.stopPropagation()
 				onClose()
 			}}
 			onClick={(event) => {

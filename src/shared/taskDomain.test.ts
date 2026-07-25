@@ -51,8 +51,7 @@ describe('task domain', () => {
 			startMode: 'manual',
 			preferredStartDate: '2026-07-20',
 			projectId: null,
-			tagNames: [],
-			localDate: '2026-07-23'
+			tagNames: []
 		})
 		assert.equal(prepared.preferredStartDate, '2026-07-20')
 		assert.throws(

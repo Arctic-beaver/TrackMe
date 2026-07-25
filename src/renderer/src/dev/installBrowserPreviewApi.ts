@@ -43,7 +43,7 @@ function projectWithProgress(project: Project): Project {
 function board(): TaskBoardSnapshot {
 	return {
 		tasks: tasks.filter((task) => task.archivedAt === null),
-		archivedTasks: tasks.filter((task) => task.archivedAt !== null),
+		archivedTaskCount: tasks.filter((task) => task.archivedAt !== null).length,
 		projects: projects.map(projectWithProgress),
 		tags
 	}
@@ -155,6 +155,20 @@ export function installBrowserPreviewApi(): void {
 		},
 		tasks: {
 			getBoard: () => Promise.resolve(board()),
+			listArchived: ({ offset, limit }) => {
+				const archivedTasks = tasks
+					.filter((task) => task.archivedAt !== null)
+					.sort((left, right) =>
+						(right.archivedAt ?? '').localeCompare(left.archivedAt ?? '')
+					)
+				const pageTasks = archivedTasks.slice(offset, offset + limit)
+				return Promise.resolve({
+					tasks: pageTasks,
+					total: archivedTasks.length,
+					offset,
+					hasMore: offset + pageTasks.length < archivedTasks.length
+				})
+			},
 			get: (taskId) => {
 				const task = tasks.find((candidate) => candidate.id === taskId)
 				if (task === undefined) return Promise.reject(new Error('Task not found.'))
@@ -172,7 +186,7 @@ export function installBrowserPreviewApi(): void {
 					dueDate: prepared.dueDate,
 					preferredStartDate: prepared.preferredStartDate,
 					startMode: prepared.startMode,
-					plannedForDate: prepared.status === 'planned' ? prepared.localDate : null,
+					plannedForDate: prepared.status === 'planned' ? todayLocalDate() : null,
 					projectId: prepared.projectId,
 					tags: resolveTags(prepared.tagNames),
 					archivedAt: null,
@@ -200,7 +214,7 @@ export function installBrowserPreviewApi(): void {
 								prepared.status === 'planned'
 									? current.status === 'planned'
 										? current.plannedForDate
-										: prepared.localDate
+										: todayLocalDate()
 									: null,
 							completedAt:
 								prepared.status === 'done'
@@ -226,7 +240,7 @@ export function installBrowserPreviewApi(): void {
 								command.status === 'planned'
 									? current.status === 'planned'
 										? current.plannedForDate
-										: command.localDate
+										: todayLocalDate()
 									: null,
 							completedAt:
 								command.status === 'done'

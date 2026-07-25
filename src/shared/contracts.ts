@@ -5,6 +5,7 @@ export const ipcChannels = Object.freeze({
 	setAppearance: 'settings:set-appearance',
 	setInterfaceLocale: 'settings:set-interface-locale',
 	getTaskBoard: 'tasks:get-board',
+	listArchivedTasks: 'tasks:list-archived',
 	getTask: 'tasks:get',
 	createTask: 'tasks:create',
 	updateTask: 'tasks:update',
@@ -131,9 +132,21 @@ export interface Task {
 
 export interface TaskBoardSnapshot {
 	readonly tasks: readonly Task[]
-	readonly archivedTasks: readonly Task[]
+	readonly archivedTaskCount: number
 	readonly projects: readonly Project[]
 	readonly tags: readonly Tag[]
+}
+
+export interface ArchivedTaskPage {
+	readonly tasks: readonly Task[]
+	readonly total: number
+	readonly offset: number
+	readonly hasMore: boolean
+}
+
+export interface ListArchivedTasksQuery {
+	readonly offset: number
+	readonly limit: number
 }
 
 export interface TaskDraft {
@@ -146,7 +159,6 @@ export interface TaskDraft {
 	readonly preferredStartDate: string | null
 	readonly projectId: string | null
 	readonly tagNames: readonly string[]
-	readonly localDate: string
 }
 
 export interface UpdateTaskCommand extends TaskDraft {
@@ -158,13 +170,11 @@ export interface ChangeTaskStatusCommand {
 	readonly id: string
 	readonly expectedRevision: number
 	readonly status: TaskStatus
-	readonly localDate: string
 }
 
 export interface TaskRevisionCommand {
 	readonly id: string
 	readonly expectedRevision: number
-	readonly localDate: string
 }
 
 export interface ProjectDraft {
@@ -203,7 +213,8 @@ export interface TrackMeApi {
 		setInterfaceLocale(locale: InterfaceLocale): Promise<ApplicationSettings>
 	}
 	readonly tasks: {
-		getBoard(localDate: string): Promise<TaskBoardSnapshot>
+		getBoard(): Promise<TaskBoardSnapshot>
+		listArchived(query: ListArchivedTasksQuery): Promise<ArchivedTaskPage>
 		get(id: string): Promise<Task>
 		create(draft: TaskDraft): Promise<Task>
 		update(command: UpdateTaskCommand): Promise<Task>

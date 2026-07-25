@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useId, useState } from 'react'
 import { Archive, FolderPlus, RefreshCw, Save, X } from 'lucide-react'
 import type {
 	Project,
@@ -14,6 +14,7 @@ import { calculatePreferredStart } from '../../../shared/taskDomain'
 import { useLocalization } from '../localization/useLocalization'
 import { ConfirmDialog } from './ConfirmDialog'
 import { CustomSelect, type CustomSelectOption } from './CustomSelect'
+import { useModalDialog } from './useModalDialog'
 
 interface EditorDraft {
 	readonly title: string
@@ -86,7 +87,10 @@ export function TaskEditor({
 	readonly onClose: () => void
 }): React.JSX.Element {
 	const { locale, t } = useLocalization()
+	const dialog = useModalDialog()
+	const titleId = useId()
 	const [sourceTask, setSourceTask] = useState(task)
+	const [conflictTask, setConflictTask] = useState<Task | null>(null)
 	const initialDraft = draftFromTask(task, localDate)
 	const [draft, setDraft] = useState(initialDraft)
 	const [baseline, setBaseline] = useState(JSON.stringify(initialDraft))
@@ -177,8 +181,7 @@ export function TaskEditor({
 			startMode: draft.startMode,
 			preferredStartDate: draft.startMode === 'manual' ? draft.preferredStartDate : null,
 			projectId: draft.projectId.length === 0 ? null : draft.projectId,
-			tagNames: draft.tagNames.split(','),
-			localDate
+			tagNames: draft.tagNames.split(',')
 		}
 		setBusy(true)
 		setErrorKey(null)
@@ -193,27 +196,36 @@ export function TaskEditor({
 						})
 			onSaved(saved)
 		} catch (error) {
-			setErrorKey(taskErrorKey(error))
+			const nextErrorKey = taskErrorKey(error)
+			setErrorKey(nextErrorKey)
+			if (nextErrorKey === 'task.validation.conflict' && sourceTask !== null) {
+				try {
+					setConflictTask(await window.trackme.tasks.get(sourceTask.id))
+				} catch {
+					setErrorKey('task.validation.generic')
+				}
+			}
 		} finally {
 			setBusy(false)
 		}
 	}
 
-	const reloadLatest = async (): Promise<void> => {
-		if (sourceTask === null) return
-		setBusy(true)
-		try {
-			const latest = await window.trackme.tasks.get(sourceTask.id)
-			const latestDraft = draftFromTask(latest, localDate)
-			setSourceTask(latest)
-			setDraft(latestDraft)
-			setBaseline(JSON.stringify(latestDraft))
-			setErrorKey(null)
-		} catch {
-			setErrorKey('task.validation.generic')
-		} finally {
-			setBusy(false)
-		}
+	const useLatestVersion = (): void => {
+		if (conflictTask === null) return
+		const latestDraft = draftFromTask(conflictTask, localDate)
+		setSourceTask(conflictTask)
+		setDraft(latestDraft)
+		setBaseline(JSON.stringify(latestDraft))
+		setConflictTask(null)
+		setErrorKey(null)
+	}
+
+	const keepMyVersion = (): void => {
+		if (conflictTask === null) return
+		setSourceTask(conflictTask)
+		setBaseline(JSON.stringify(draftFromTask(conflictTask, localDate)))
+		setConflictTask(null)
+		setErrorKey(null)
 	}
 
 	const archiveTask = async (): Promise<void> => {
@@ -222,8 +234,7 @@ export function TaskEditor({
 		try {
 			const archived = await window.trackme.tasks.archive({
 				id: sourceTask.id,
-				expectedRevision: sourceTask.revision,
-				localDate
+				expectedRevision: sourceTask.revision
 			})
 			onArchived(archived)
 		} catch (error) {
@@ -271,11 +282,28 @@ export function TaskEditor({
 	}
 
 	return (
-		<dialog open className="task-dialog" onCancel={close}>
+		<dialog
+			ref={dialog}
+			className="task-dialog"
+			aria-labelledby={titleId}
+			onCancel={(event) => {
+				event.preventDefault()
+				close()
+			}}
+			onKeyDown={(event) => {
+				if (event.key !== 'Escape') return
+				event.preventDefault()
+				event.stopPropagation()
+				close()
+			}}
+			onClick={(event) => {
+				if (event.currentTarget === event.target) close()
+			}}
+		>
 			<div className="dialog-panel">
 				<header className="dialog-header">
 					<div>
-						<h2>
+						<h2 id={titleId}>
 							{sourceTask === null
 								? t('task.editor.createTitle')
 								: t('task.editor.editTitle')}
@@ -517,15 +545,20 @@ export function TaskEditor({
 					{errorKey === null ? null : (
 						<div className="form-error field-wide" role="alert">
 							<span>{t(errorKey)}</span>
-							{errorKey === 'task.validation.conflict' ? (
-								<button
-									type="button"
-									disabled={busy}
-									onClick={() => void reloadLatest()}
-								>
-									<RefreshCw aria-hidden="true" />
-									{t('actions.retry')}
-								</button>
+							{errorKey === 'task.validation.conflict' && conflictTask !== null ? (
+								<div className="conflict-actions">
+									<button
+										type="button"
+										disabled={busy}
+										onClick={useLatestVersion}
+									>
+										<RefreshCw aria-hidden="true" />
+										{t('task.conflict.useLatest')}
+									</button>
+									<button type="button" disabled={busy} onClick={keepMyVersion}>
+										{t('task.conflict.keepMine')}
+									</button>
+								</div>
 							) : null}
 						</div>
 					)}

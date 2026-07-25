@@ -1,9 +1,9 @@
-import { useEffect, useRef } from 'react'
 import { Languages, X } from 'lucide-react'
 import { interfaceLocales, type InterfaceLocale } from '../../../shared/contracts'
 import type { LocalizationKey } from '../../../shared/localization'
 import { useLocalization } from '../localization/useLocalization'
 import { useApplicationSettings } from './applicationSettingsContext'
+import { useModalDialog } from './useModalDialog'
 
 const localeKeys: Readonly<Record<InterfaceLocale, LocalizationKey>> = {
 	system: 'language.locale.system',
@@ -20,13 +20,9 @@ const localeDescriptionKeys: Readonly<Record<InterfaceLocale, LocalizationKey>> 
 }
 
 export function LanguageDialog({ onClose }: { readonly onClose: () => void }): React.JSX.Element {
-	const dialog = useRef<HTMLDialogElement>(null)
+	const dialog = useModalDialog()
 	const { t } = useLocalization()
 	const { settings, saveError, clearSaveError, setInterfaceLocale } = useApplicationSettings()
-
-	useEffect(() => {
-		dialog.current?.showModal()
-	}, [])
 
 	return (
 		<dialog
@@ -35,6 +31,12 @@ export function LanguageDialog({ onClose }: { readonly onClose: () => void }): R
 			aria-labelledby="language-title"
 			onCancel={(event) => {
 				event.preventDefault()
+				onClose()
+			}}
+			onKeyDown={(event) => {
+				if (event.key !== 'Escape') return
+				event.preventDefault()
+				event.stopPropagation()
 				onClose()
 			}}
 			onClick={(event) => {

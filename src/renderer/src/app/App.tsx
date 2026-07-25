@@ -19,7 +19,6 @@ import type {
 import { IpcRemoteError } from '../../../shared/ipcProtocol'
 import type { LocalizationKey } from '../../../shared/localization'
 import { formatCalendarDate } from '../../../shared/localization'
-import { todayLocalDate } from '../../../shared/taskDomain'
 import { useLocalization } from '../localization/useLocalization'
 import { ArchivedTasksDialog } from './ArchivedTasksDialog'
 import { AppearanceDialog } from './AppearanceDialog'
@@ -28,6 +27,7 @@ import { LanguageDialog } from './LanguageDialog'
 import { TaskEditor } from './TaskEditor'
 import { TitleBar } from './TitleBar'
 import { TodayBoard } from './TodayBoard'
+import { useLocalDate } from './useLocalDate'
 
 const navigation: ReadonlyArray<{
 	readonly id: NavigationSection
@@ -85,11 +85,10 @@ function activeView(section: NavigationSection): {
 export function App({ startup }: { readonly startup: StartupState }): React.JSX.Element {
 	const { locale, t } = useLocalization()
 	const [section, setSection] = useState<NavigationSection>('today')
-	const [appearanceOpen, setAppearanceOpen] = useState(false)
-	const [languageOpen, setLanguageOpen] = useState(false)
-	const [editorOpen, setEditorOpen] = useState(false)
+	const [overlay, setOverlay] = useState<
+		'appearance' | 'language' | 'editor' | 'archived' | null
+	>(null)
 	const [editingTask, setEditingTask] = useState<Task | null>(null)
-	const [archivedOpen, setArchivedOpen] = useState(false)
 	const [snapshot, setSnapshot] = useState<TaskBoardSnapshot | null>(null)
 	const [loading, setLoading] = useState(true)
 	const [operationError, setOperationError] = useState<
@@ -98,24 +97,29 @@ export function App({ startup }: { readonly startup: StartupState }): React.JSX.
 	const [operationBusy, setOperationBusy] = useState(false)
 	const [projectFilter, setProjectFilter] = useState('')
 	const [tagFilter, setTagFilter] = useState('')
-	const [localDate] = useState(() => todayLocalDate())
+	const localDate = useLocalDate()
 	const readinessReported = useRef(false)
+	const refreshSequence = useRef(0)
 	const placeholder = activeView(section)
 	const refreshBoard = useCallback(async () => {
+		const sequence = refreshSequence.current + 1
+		refreshSequence.current = sequence
 		try {
-			const next = await window.trackme.tasks.getBoard(localDate)
+			const next = await window.trackme.tasks.getBoard()
+			if (sequence !== refreshSequence.current) return
 			setSnapshot(next)
 			setOperationError(null)
 		} catch (error) {
+			if (sequence !== refreshSequence.current) return
 			setOperationError(
 				error instanceof IpcRemoteError && error.code === 'STORAGE_BUSY'
 					? 'task.validation.storageBusy'
 					: 'board.loadError'
 			)
 		} finally {
-			setLoading(false)
+			if (sequence === refreshSequence.current) setLoading(false)
 		}
-	}, [localDate])
+	}, [])
 
 	useEffect(() => {
 		if (readinessReported.current) return
@@ -124,43 +128,21 @@ export function App({ startup }: { readonly startup: StartupState }): React.JSX.
 	}, [])
 
 	useEffect(() => {
-		let disposed = false
-		void window.trackme.tasks
-			.getBoard(localDate)
-			.then((next) => {
-				if (!disposed) {
-					setSnapshot(next)
-					setOperationError(null)
-				}
-			})
-			.catch((error: unknown) => {
-				if (!disposed) {
-					setOperationError(
-						error instanceof IpcRemoteError && error.code === 'STORAGE_BUSY'
-							? 'task.validation.storageBusy'
-							: 'board.loadError'
-					)
-				}
-			})
-			.finally(() => {
-				if (!disposed) setLoading(false)
-			})
-		return () => {
-			disposed = true
-		}
-	}, [localDate])
+		const timer = window.setTimeout(() => void refreshBoard(), 0)
+		return () => window.clearTimeout(timer)
+	}, [localDate, refreshBoard])
 
 	const openCreate = (): void => {
 		setEditingTask(null)
-		setEditorOpen(true)
+		setOverlay('editor')
 	}
 
 	const openEdit = (task: Task): void => {
 		setEditingTask(task)
-		setEditorOpen(true)
+		setOverlay('editor')
 	}
 
-	const changedTask = (task: Task): void => {
+	const changedTask = (task: Task, archiveDelta = 0): void => {
 		setSnapshot((current) =>
 			current === null
 				? current
@@ -175,17 +157,7 @@ export function App({ startup }: { readonly startup: StartupState }): React.JSX.
 										task
 									]
 								: current.tasks.filter((candidate) => candidate.id !== task.id),
-						archivedTasks:
-							task.archivedAt === null
-								? current.archivedTasks.filter(
-										(candidate) => candidate.id !== task.id
-									)
-								: [
-										...current.archivedTasks.filter(
-											(candidate) => candidate.id !== task.id
-										),
-										task
-									]
+						archivedTaskCount: Math.max(0, current.archivedTaskCount + archiveDelta)
 					}
 		)
 	}
@@ -198,8 +170,7 @@ export function App({ startup }: { readonly startup: StartupState }): React.JSX.
 			const updated = await window.trackme.tasks.changeStatus({
 				id: task.id,
 				expectedRevision: task.revision,
-				status,
-				localDate
+				status
 			})
 			changedTask(updated)
 			void refreshBoard()
@@ -259,8 +230,8 @@ export function App({ startup }: { readonly startup: StartupState }): React.JSX.
 				<TitleBar
 					platform={startup.platform}
 					initialMaximized={startup.windowMaximized}
-					onOpenAppearance={() => setAppearanceOpen(true)}
-					onOpenLanguage={() => setLanguageOpen(true)}
+					onOpenAppearance={() => setOverlay('appearance')}
+					onOpenLanguage={() => setOverlay('language')}
 					onCreateTask={openCreate}
 				/>
 				<nav className="primary-navigation" aria-label={t('navigation.primary')}>
@@ -327,12 +298,12 @@ export function App({ startup }: { readonly startup: StartupState }): React.JSX.
 					<button
 						type="button"
 						className="filter-chip"
-						onClick={() => setArchivedOpen(true)}
+						onClick={() => setOverlay('archived')}
 					>
 						<Archive aria-hidden="true" />
 						<span>
 							{t('actions.archived')}
-							{snapshot === null ? '' : ` · ${String(snapshot.archivedTasks.length)}`}
+							{snapshot === null ? '' : ` · ${String(snapshot.archivedTaskCount)}`}
 						</span>
 					</button>
 				</div>
@@ -367,9 +338,11 @@ export function App({ startup }: { readonly startup: StartupState }): React.JSX.
 				)}
 			</main>
 
-			{appearanceOpen ? <AppearanceDialog onClose={() => setAppearanceOpen(false)} /> : null}
-			{languageOpen ? <LanguageDialog onClose={() => setLanguageOpen(false)} /> : null}
-			{editorOpen && snapshot !== null ? (
+			{overlay === 'appearance' ? (
+				<AppearanceDialog onClose={() => setOverlay(null)} />
+			) : null}
+			{overlay === 'language' ? <LanguageDialog onClose={() => setOverlay(null)} /> : null}
+			{overlay === 'editor' && snapshot !== null ? (
 				<TaskEditor
 					task={editingTask}
 					projects={snapshot.projects}
@@ -377,38 +350,26 @@ export function App({ startup }: { readonly startup: StartupState }): React.JSX.
 					localDate={localDate}
 					onSaved={(task) => {
 						changedTask(task)
-						setEditorOpen(false)
+						setOverlay(null)
 						void refreshBoard()
 					}}
 					onArchived={(task) => {
-						changedTask(task)
-						setEditorOpen(false)
+						changedTask(task, 1)
+						setOverlay(null)
 						void refreshBoard()
 					}}
 					onProjectSaved={saveProject}
-					onClose={() => setEditorOpen(false)}
+					onClose={() => setOverlay(null)}
 				/>
 			) : null}
-			{archivedOpen && snapshot !== null ? (
+			{overlay === 'archived' && snapshot !== null ? (
 				<ArchivedTasksDialog
-					tasks={snapshot.archivedTasks}
-					busy={operationBusy}
-					onRestore={(task) => {
-						setOperationBusy(true)
-						void window.trackme.tasks
-							.restore({
-								id: task.id,
-								expectedRevision: task.revision,
-								localDate
-							})
-							.then((restored) => {
-								changedTask(restored)
-								return refreshBoard()
-							})
-							.catch(() => setOperationError('board.loadError'))
-							.finally(() => setOperationBusy(false))
+					totalCount={snapshot.archivedTaskCount}
+					onRestored={(task) => {
+						changedTask(task, -1)
+						void refreshBoard()
 					}}
-					onClose={() => setArchivedOpen(false)}
+					onClose={() => setOverlay(null)}
 				/>
 			) : null}
 		</div>

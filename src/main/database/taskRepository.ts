@@ -1,6 +1,8 @@
 import { randomUUID } from 'node:crypto'
 import type {
+	ArchivedTaskPage,
 	ChangeTaskStatusCommand,
+	ListArchivedTasksQuery,
 	Project,
 	ProjectDraft,
 	Tag,
@@ -12,11 +14,11 @@ import type {
 	UpdateTaskCommand
 } from '../../shared/contracts'
 import {
-	assertLocalDate,
 	DomainValidationError,
 	normalizeEntityName,
 	prepareTaskDraft,
-	RevisionConflictError
+	RevisionConflictError,
+	todayLocalDate
 } from '../../shared/taskDomain'
 import type { TrackMeDatabase } from './database'
 
@@ -58,6 +60,7 @@ interface TagRow {
 export interface TaskRepositoryOptions {
 	readonly createId?: () => string
 	readonly now?: () => string
+	readonly currentLocalDate?: () => string
 }
 
 function immutableTag(row: TagRow): Tag {
@@ -108,22 +111,47 @@ export class TaskRepository {
 	readonly #database: TrackMeDatabase
 	readonly #createId: () => string
 	readonly #now: () => string
+	readonly #currentLocalDate: () => string
 
 	constructor(database: TrackMeDatabase, options: TaskRepositoryOptions = {}) {
 		this.#database = database
 		this.#createId = options.createId ?? randomUUID
 		this.#now = options.now ?? (() => new Date().toISOString())
+		this.#currentLocalDate = options.currentLocalDate ?? (() => todayLocalDate())
 	}
 
-	getBoard(localDate: string): TaskBoardSnapshot {
-		assertLocalDate(localDate, 'localDate')
+	getBoard(): TaskBoardSnapshot {
+		const archivedTaskCount = this.#database.connection
+			.prepare('SELECT COUNT(*) AS count FROM tasks WHERE archived_at IS NOT NULL')
+			.get() as unknown as { readonly count: number }
 		return Object.freeze({
 			tasks: Object.freeze(this.#listTasks('archived_at IS NULL')),
-			archivedTasks: Object.freeze(
-				this.#listTasks('archived_at IS NOT NULL', 'archived_at DESC, updated_at DESC')
-			),
+			archivedTaskCount: archivedTaskCount.count,
 			projects: Object.freeze(this.listProjects()),
 			tags: Object.freeze(this.listTags())
+		})
+	}
+
+	listArchived(query: ListArchivedTasksQuery): ArchivedTaskPage {
+		const totalRow = this.#database.connection
+			.prepare('SELECT COUNT(*) AS count FROM tasks WHERE archived_at IS NOT NULL')
+			.get() as unknown as { readonly count: number }
+		const rows = this.#database.connection
+			.prepare(
+				`
+					SELECT ${taskColumns} FROM tasks
+					WHERE archived_at IS NOT NULL
+					ORDER BY archived_at DESC, updated_at DESC
+					LIMIT ? OFFSET ?
+				`
+			)
+			.all(query.limit, query.offset) as unknown as TaskRow[]
+		const tasks = this.#tasksFromRows(rows)
+		return Object.freeze({
+			tasks: Object.freeze(tasks),
+			total: totalRow.count,
+			offset: query.offset,
+			hasMore: query.offset + tasks.length < totalRow.count
 		})
 	}
 
@@ -218,8 +246,9 @@ export class TaskRepository {
 			this.#assertActiveProject(prepared.projectId)
 			const id = this.#createId()
 			const now = this.#now()
+			const localDate = this.#currentLocalDate()
 			const completedAt = prepared.status === 'done' ? now : null
-			const plannedForDate = prepared.status === 'planned' ? prepared.localDate : null
+			const plannedForDate = prepared.status === 'planned' ? localDate : null
 			this.#database.connection
 				.prepare(
 					`
@@ -246,7 +275,7 @@ export class TaskRepository {
 					now
 				)
 			this.#replaceTaskTags(id, prepared.tagNames)
-			this.#recordActivity(id, 'created', prepared.localDate, { version: 1 })
+			this.#recordActivity(id, 'created', localDate, { version: 1 })
 			return this.get(id)
 		})
 	}
@@ -260,11 +289,12 @@ export class TaskRepository {
 			}
 			this.#assertActiveProject(prepared.projectId)
 			const now = this.#now()
+			const localDate = this.#currentLocalDate()
 			const plannedForDate =
 				prepared.status === 'planned'
 					? current.status === 'planned'
 						? current.plannedForDate
-						: prepared.localDate
+						: localDate
 					: null
 			const completedAt =
 				prepared.status === 'done'
@@ -300,7 +330,7 @@ export class TaskRepository {
 			if (Number(result.changes) !== 1) throw new RevisionConflictError(command.id)
 			this.#replaceTaskTags(command.id, prepared.tagNames)
 			if (current.status !== prepared.status) {
-				this.#recordActivity(command.id, 'status_changed', prepared.localDate, {
+				this.#recordActivity(command.id, 'status_changed', localDate, {
 					version: 1,
 					from: current.status,
 					to: prepared.status
@@ -311,12 +341,12 @@ export class TaskRepository {
 				current.estimateDays !== prepared.estimateDays ||
 				current.preferredStartDate !== prepared.preferredStartDate
 			) {
-				this.#recordActivity(command.id, 'dates_changed', prepared.localDate, {
+				this.#recordActivity(command.id, 'dates_changed', localDate, {
 					version: 1
 				})
 			}
 			if (current.projectId !== prepared.projectId) {
-				this.#recordActivity(command.id, 'project_changed', prepared.localDate, {
+				this.#recordActivity(command.id, 'project_changed', localDate, {
 					version: 1,
 					projectId: prepared.projectId
 				})
@@ -326,20 +356,50 @@ export class TaskRepository {
 	}
 
 	changeStatus(command: ChangeTaskStatusCommand): Task {
-		const current = this.get(command.id)
-		return this.update({
-			id: current.id,
-			expectedRevision: command.expectedRevision,
-			title: current.title,
-			description: current.description,
-			status: command.status,
-			estimateDays: current.estimateDays,
-			dueDate: current.dueDate,
-			startMode: current.startMode,
-			preferredStartDate: current.preferredStartDate,
-			projectId: current.projectId,
-			tagNames: current.tags.map((tag) => tag.name),
-			localDate: command.localDate
+		return this.#database.transaction(() => {
+			const current = this.get(command.id)
+			if (current.revision !== command.expectedRevision) {
+				throw new RevisionConflictError(command.id)
+			}
+			if (current.status === command.status) return current
+			const now = this.#now()
+			const localDate = this.#currentLocalDate()
+			const plannedForDate =
+				command.status === 'planned'
+					? current.status === 'planned'
+						? current.plannedForDate
+						: localDate
+					: null
+			const completedAt =
+				command.status === 'done'
+					? current.status === 'done'
+						? current.completedAt
+						: now
+					: null
+			const result = this.#database.connection
+				.prepare(
+					`
+						UPDATE tasks
+						SET status = ?, planned_for_date = ?, completed_at = ?,
+							revision = revision + 1, updated_at = ?
+						WHERE id = ? AND revision = ? AND archived_at IS NULL
+					`
+				)
+				.run(
+					command.status,
+					plannedForDate,
+					completedAt,
+					now,
+					command.id,
+					command.expectedRevision
+				)
+			if (Number(result.changes) !== 1) throw new RevisionConflictError(command.id)
+			this.#recordActivity(command.id, 'status_changed', localDate, {
+				version: 1,
+				from: current.status,
+				to: command.status
+			})
+			return this.get(command.id)
 		})
 	}
 
@@ -353,6 +413,11 @@ export class TaskRepository {
 
 	#setArchived(command: TaskRevisionCommand, archived: boolean): Task {
 		return this.#database.transaction(() => {
+			const current = this.get(command.id)
+			if (current.revision !== command.expectedRevision) {
+				throw new RevisionConflictError(command.id)
+			}
+			if ((current.archivedAt !== null) === archived) return current
 			const now = this.#now()
 			const result = this.#database.connection
 				.prepare(
@@ -360,6 +425,7 @@ export class TaskRepository {
 						UPDATE tasks
 						SET archived_at = ?, revision = revision + 1, updated_at = ?
 						WHERE id = ? AND revision = ?
+							AND ${archived ? 'archived_at IS NULL' : 'archived_at IS NOT NULL'}
 					`
 				)
 				.run(archived ? now : null, now, command.id, command.expectedRevision)
@@ -367,7 +433,7 @@ export class TaskRepository {
 			this.#recordActivity(
 				command.id,
 				archived ? 'archived' : 'restored',
-				command.localDate,
+				this.#currentLocalDate(),
 				{ version: 1 }
 			)
 			return this.get(command.id)
@@ -378,7 +444,7 @@ export class TaskRepository {
 		const rows = this.#database.connection
 			.prepare(`SELECT ${taskColumns} FROM tasks WHERE ${where} ORDER BY ${order}`)
 			.all() as unknown as TaskRow[]
-		return rows.map((row) => this.#taskFromRow(row))
+		return this.#tasksFromRows(rows)
 	}
 
 	#taskFromRow(row: TaskRow): Task {
@@ -393,6 +459,41 @@ export class TaskRepository {
 				`
 			)
 			.all(row.id) as unknown as TagRow[]
+		return this.#immutableTask(row, tagRows)
+	}
+
+	#tasksFromRows(rows: readonly TaskRow[]): Task[] {
+		if (rows.length === 0) return []
+		const tagsByTaskId = new Map<string, TagRow[]>()
+		const chunkSize = 500
+		for (let offset = 0; offset < rows.length; offset += chunkSize) {
+			const taskIds = rows.slice(offset, offset + chunkSize).map((row) => row.id)
+			const placeholders = taskIds.map(() => '?').join(', ')
+			const tagRows = this.#database.connection
+				.prepare(
+					`
+						SELECT
+							task_tags.task_id,
+							tags.id,
+							tags.name,
+							tags.created_at
+						FROM task_tags
+						INNER JOIN tags ON tags.id = task_tags.tag_id
+						WHERE task_tags.task_id IN (${placeholders})
+						ORDER BY task_tags.task_id, tags.normalized_name, tags.id
+					`
+				)
+				.all(...taskIds) as unknown as Array<TagRow & { readonly task_id: string }>
+			for (const tagRow of tagRows) {
+				const taskTags = tagsByTaskId.get(tagRow.task_id) ?? []
+				taskTags.push(tagRow)
+				tagsByTaskId.set(tagRow.task_id, taskTags)
+			}
+		}
+		return rows.map((row) => this.#immutableTask(row, tagsByTaskId.get(row.id) ?? []))
+	}
+
+	#immutableTask(row: TaskRow, tagRows: readonly TagRow[]): Task {
 		return Object.freeze({
 			id: row.id,
 			title: row.title,

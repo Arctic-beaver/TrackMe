@@ -40,10 +40,12 @@ export function CustomSelect<Value extends string>({
 	const menu = useRef<HTMLUListElement>(null)
 	const search = useRef('')
 	const searchTimer = useRef<number | null>(null)
+	const positionFrame = useRef<number | null>(null)
 	const selectedIndex = options.findIndex((option) => option.value === value)
 	const selectedOption = options[selectedIndex] ?? options[0]
 	const [open, setOpen] = useState(false)
 	const [activeIndex, setActiveIndex] = useState(Math.max(0, selectedIndex))
+	const safeActiveIndex = Math.min(Math.max(0, activeIndex), Math.max(0, options.length - 1))
 	const [position, setPosition] = useState<MenuPosition>({
 		left: viewportPadding,
 		top: viewportPadding,
@@ -77,14 +79,31 @@ export function CustomSelect<Value extends string>({
 			Math.max(viewportPadding, bounds.left),
 			Math.max(viewportPadding, window.innerWidth - width - viewportPadding)
 		)
-		setPosition({
+		const nextPosition = {
 			left,
 			top: placement === 'above' ? bounds.top - menuGap : bounds.bottom + menuGap,
 			width,
 			maxHeight: Math.max(96, Math.min(preferredMenuHeight, availableHeight)),
 			placement
-		})
+		} as const
+		setPosition((current) =>
+			current.left === nextPosition.left &&
+			current.top === nextPosition.top &&
+			current.width === nextPosition.width &&
+			current.maxHeight === nextPosition.maxHeight &&
+			current.placement === nextPosition.placement
+				? current
+				: nextPosition
+		)
 	}, [])
+
+	const schedulePositionUpdate = useCallback((): void => {
+		if (positionFrame.current !== null) return
+		positionFrame.current = window.requestAnimationFrame(() => {
+			positionFrame.current = null
+			updatePosition()
+		})
+	}, [updatePosition])
 
 	const closeMenu = useCallback((): void => {
 		setOpen(false)
@@ -131,7 +150,7 @@ export function CustomSelect<Value extends string>({
 				search.current = ''
 				searchTimer.current = null
 			}, 650)
-			const start = open ? activeIndex + 1 : Math.max(0, selectedIndex + 1)
+			const start = open ? safeActiveIndex + 1 : Math.max(0, selectedIndex + 1)
 			for (let offset = 0; offset < options.length; offset += 1) {
 				const index = (start + offset) % options.length
 				if (options[index]?.label.toLocaleLowerCase().startsWith(search.current)) {
@@ -141,7 +160,7 @@ export function CustomSelect<Value extends string>({
 				}
 			}
 		},
-		[activeIndex, open, options, selectedIndex]
+		[open, options, safeActiveIndex, selectedIndex]
 	)
 
 	const onTriggerKeyDown = (event: React.KeyboardEvent<HTMLButtonElement>): void => {
@@ -169,12 +188,16 @@ export function CustomSelect<Value extends string>({
 		}
 		if (event.key === 'Enter' || event.key === ' ') {
 			event.preventDefault()
-			if (open) choose(activeIndex)
+			if (open) choose(safeActiveIndex)
 			else openMenu()
 			return
 		}
 		if (event.key === 'Escape' && open) {
 			event.preventDefault()
+			closeMenu()
+			return
+		}
+		if (event.key === 'Tab' && open) {
 			closeMenu()
 			return
 		}
@@ -187,20 +210,27 @@ export function CustomSelect<Value extends string>({
 	useLayoutEffect(() => {
 		if (!open) return
 		updatePosition()
-		const onViewportChange = (): void => updatePosition()
+		const activeMenu = menu.current
+		activeMenu?.showPopover()
+		const onViewportChange = (): void => schedulePositionUpdate()
 		window.addEventListener('resize', onViewportChange)
 		window.addEventListener('scroll', onViewportChange, true)
 		return () => {
 			window.removeEventListener('resize', onViewportChange)
 			window.removeEventListener('scroll', onViewportChange, true)
+			if (positionFrame.current !== null) {
+				window.cancelAnimationFrame(positionFrame.current)
+				positionFrame.current = null
+			}
+			if (activeMenu?.matches(':popover-open')) activeMenu.hidePopover()
 		}
-	}, [open, updatePosition])
+	}, [open, schedulePositionUpdate, updatePosition])
 
 	useEffect(() => {
 		if (!open) return
-		const activeOption = document.getElementById(optionId(activeIndex))
+		const activeOption = document.getElementById(optionId(safeActiveIndex))
 		activeOption?.scrollIntoView({ block: 'nearest' })
-	}, [activeIndex, open, optionId])
+	}, [open, optionId, safeActiveIndex])
 
 	useEffect(() => {
 		if (!open) return
@@ -226,6 +256,11 @@ export function CustomSelect<Value extends string>({
 			ref={root}
 			className={`custom-select ${className}`.trim()}
 			data-state={open ? 'open' : 'closed'}
+			onBlur={(event) => {
+				const nextTarget = event.relatedTarget
+				if (nextTarget instanceof Node && event.currentTarget.contains(nextTarget)) return
+				closeMenu()
+			}}
 		>
 			<button
 				ref={trigger}
@@ -237,7 +272,7 @@ export function CustomSelect<Value extends string>({
 				aria-haspopup="listbox"
 				aria-expanded={open}
 				aria-controls={open ? listboxId : undefined}
-				aria-activedescendant={open ? optionId(activeIndex) : undefined}
+				aria-activedescendant={open ? optionId(safeActiveIndex) : undefined}
 				onClick={() => {
 					if (open) closeMenu()
 					else openMenu()
@@ -253,6 +288,7 @@ export function CustomSelect<Value extends string>({
 							ref={menu}
 							id={listboxId}
 							className="custom-select-menu"
+							popover="manual"
 							role="listbox"
 							aria-label={ariaLabel}
 							data-placement={position.placement}
@@ -270,7 +306,7 @@ export function CustomSelect<Value extends string>({
 									className="custom-select-option"
 									role="option"
 									aria-selected={option.value === value}
-									data-active={activeIndex === index}
+									data-active={safeActiveIndex === index}
 									onPointerMove={() => setActiveIndex(index)}
 									onPointerDown={(event) => {
 										event.preventDefault()

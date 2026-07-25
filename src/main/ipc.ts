@@ -5,10 +5,10 @@ import {
 	createIpcSuccess,
 	IpcContractError,
 	parseAppearance,
-	parseBoardDate,
 	parseChangeTaskStatusCommand,
 	parseInterfaceLocale,
 	parseIpcRequest,
+	parseListArchivedTasksQuery,
 	parseNull,
 	parseProjectDraft,
 	parseTaskDraft,
@@ -117,8 +117,9 @@ export function registerIpcHandlers(dependencies: IpcDependencies): () => void {
 		dependencies.onSettingsChanged(settings)
 		return settings
 	})
-	register(ipcChannels.getTaskBoard, parseBoardDate, (_window, localDate) =>
-		dependencies.tasks.getBoard(localDate)
+	register(ipcChannels.getTaskBoard, parseNull, () => dependencies.tasks.getBoard())
+	register(ipcChannels.listArchivedTasks, parseListArchivedTasksQuery, (_window, query) =>
+		dependencies.tasks.listArchived(query)
 	)
 	register(ipcChannels.getTask, parseTaskId, (_window, id) => dependencies.tasks.get(id))
 	register(ipcChannels.createTask, parseTaskDraft, (_window, draft) =>

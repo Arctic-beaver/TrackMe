@@ -6,9 +6,11 @@ import {
 	isThemeFamily,
 	type Appearance,
 	type ApplicationSettings,
+	type ArchivedTaskPage,
 	type ChangeTaskStatusCommand,
 	type DesktopPlatform,
 	type InterfaceLocale,
+	type ListArchivedTasksQuery,
 	type Project,
 	type ProjectDraft,
 	type StartupState,
@@ -254,8 +256,7 @@ export function parseTaskDraft(value: unknown): TaskDraft {
 				? null
 				: parseLocalDate(value.preferredStartDate, 'Task preferred start'),
 		projectId: value.projectId === null ? null : parseId(value.projectId, 'Project identifier'),
-		tagNames: parseStringArray(value.tagNames, 'Task tags'),
-		localDate: parseLocalDate(value.localDate, 'Current local date')
+		tagNames: parseStringArray(value.tagNames, 'Task tags')
 	})
 }
 
@@ -275,8 +276,7 @@ export function parseChangeTaskStatusCommand(value: unknown): ChangeTaskStatusCo
 	return Object.freeze({
 		id: parseId(value.id, 'Task identifier'),
 		expectedRevision: parsePositiveInteger(value.expectedRevision, 'Task revision'),
-		status: value.status,
-		localDate: parseLocalDate(value.localDate, 'Current local date')
+		status: value.status
 	})
 }
 
@@ -284,8 +284,7 @@ export function parseTaskRevisionCommand(value: unknown): TaskRevisionCommand {
 	if (!isRecord(value)) throw new IpcContractError('Task revision command is invalid.')
 	return Object.freeze({
 		id: parseId(value.id, 'Task identifier'),
-		expectedRevision: parsePositiveInteger(value.expectedRevision, 'Task revision'),
-		localDate: parseLocalDate(value.localDate, 'Current local date')
+		expectedRevision: parsePositiveInteger(value.expectedRevision, 'Task revision')
 	})
 }
 
@@ -310,8 +309,12 @@ export function parseTaskId(value: unknown): string {
 	return parseId(value, 'Task identifier')
 }
 
-export function parseBoardDate(value: unknown): string {
-	return parseLocalDate(value, 'Board local date')
+export function parseListArchivedTasksQuery(value: unknown): ListArchivedTasksQuery {
+	if (!isRecord(value)) throw new IpcContractError('Archived task query is invalid.')
+	const offset = parseSafeInteger(value.offset, 'Archived task offset')
+	const limit = parsePositiveInteger(value.limit, 'Archived task limit')
+	if (limit > 50) throw new IpcContractError('Archived task limit is invalid.')
+	return Object.freeze({ offset, limit })
 }
 
 export function parseTag(value: unknown): Tag {
@@ -373,7 +376,6 @@ export function parseTaskBoardSnapshot(value: unknown): TaskBoardSnapshot {
 	if (
 		!isRecord(value) ||
 		!Array.isArray(value.tasks) ||
-		!Array.isArray(value.archivedTasks) ||
 		!Array.isArray(value.projects) ||
 		!Array.isArray(value.tags)
 	) {
@@ -381,8 +383,20 @@ export function parseTaskBoardSnapshot(value: unknown): TaskBoardSnapshot {
 	}
 	return Object.freeze({
 		tasks: Object.freeze(value.tasks.map(parseTask)),
-		archivedTasks: Object.freeze(value.archivedTasks.map(parseTask)),
+		archivedTaskCount: parseSafeInteger(value.archivedTaskCount, 'Archived task count'),
 		projects: Object.freeze(value.projects.map(parseProject)),
 		tags: Object.freeze(value.tags.map(parseTag))
+	})
+}
+
+export function parseArchivedTaskPage(value: unknown): ArchivedTaskPage {
+	if (!isRecord(value) || !Array.isArray(value.tasks)) {
+		throw new IpcContractError('Archived task page is invalid.')
+	}
+	return Object.freeze({
+		tasks: Object.freeze(value.tasks.map(parseTask)),
+		total: parseSafeInteger(value.total, 'Archived task count'),
+		offset: parseSafeInteger(value.offset, 'Archived task offset'),
+		hasMore: parseBoolean(value.hasMore, 'Archived task continuation')
 	})
 }

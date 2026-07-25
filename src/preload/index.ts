@@ -2,12 +2,13 @@ import { contextBridge, ipcRenderer } from 'electron'
 import { ipcChannels, type TrackMeApi } from '../shared/contracts'
 import {
 	createIpcRequest,
+	parseArchivedTaskPage,
 	parseApplicationSettings,
 	parseAppearance,
-	parseBoardDate,
 	parseChangeTaskStatusCommand,
 	parseInterfaceLocale,
 	parseIpcResponse,
+	parseListArchivedTasksQuery,
 	parseNull,
 	parseProject,
 	parseProjectDraft,
@@ -58,11 +59,12 @@ const trackMeApi: TrackMeApi = {
 			)
 	},
 	tasks: {
-		getBoard: (localDate) =>
+		getBoard: () => invokeValidated(ipcChannels.getTaskBoard, null, parseTaskBoardSnapshot),
+		listArchived: (query) =>
 			invokeValidated(
-				ipcChannels.getTaskBoard,
-				parseBoardDate(localDate),
-				parseTaskBoardSnapshot
+				ipcChannels.listArchivedTasks,
+				parseListArchivedTasksQuery(query),
+				parseArchivedTaskPage
 			),
 		get: (id) => invokeValidated(ipcChannels.getTask, parseTaskId(id), parseTask),
 		create: (draft) =>

@@ -1,7 +1,8 @@
-import { useEffect, useId, useRef } from 'react'
+import { useId, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import { AlertTriangle, X } from 'lucide-react'
 import { useLocalization } from '../localization/useLocalization'
+import { useModalDialog } from './useModalDialog'
 
 export function ConfirmDialog({
 	onConfirm,
@@ -10,23 +11,11 @@ export function ConfirmDialog({
 	readonly onConfirm: () => void
 	readonly onCancel: () => void
 }): React.JSX.Element {
-	const dialog = useRef<HTMLDialogElement>(null)
 	const safeAction = useRef<HTMLButtonElement>(null)
+	const dialog = useModalDialog(safeAction)
 	const titleId = useId()
 	const descriptionId = useId()
 	const { t } = useLocalization()
-
-	useEffect(() => {
-		const previousFocus =
-			document.activeElement instanceof HTMLElement ? document.activeElement : null
-		const activeDialog = dialog.current
-		activeDialog?.showModal()
-		safeAction.current?.focus()
-		return () => {
-			if (activeDialog?.open) activeDialog.close()
-			if (previousFocus?.isConnected) previousFocus.focus()
-		}
-	}, [])
 
 	return createPortal(
 		<dialog

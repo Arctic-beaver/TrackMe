@@ -1,0 +1,100 @@
+.custom-select {
+	position: relative;
+	width: 100%;
+	min-width: 0;
+}
+
+.custom-select-trigger {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	width: 100%;
+	min-width: 0;
+	gap: 0.55rem;
+	padding: 0.62rem 0.68rem;
+	color: var(--text);
+	border: 1px solid color-mix(in srgb, var(--text) 14%, transparent);
+	border-radius: 0.75rem;
+	background: color-mix(in srgb, var(--column-tray) 76%, transparent);
+	font: inherit;
+	text-align: left;
+}
+
+.custom-select-trigger:hover:not(:disabled) {
+	border-color: color-mix(in srgb, var(--accent) 52%, var(--border));
+	background: color-mix(in srgb, var(--task-card) 80%, transparent);
+}
+
+.custom-select-value {
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.custom-select-chevron {
+	transition: transform 120ms ease;
+}
+
+.custom-select[data-state='open'] .custom-select-chevron {
+	transform: rotate(180deg);
+}
+
+.custom-select-menu {
+	position: fixed;
+	inset: auto;
+	z-index: 60;
+	display: grid;
+	gap: 0.15rem;
+	margin: 0;
+	padding: 0.3rem;
+	overflow-y: auto;
+	color: var(--text);
+	list-style: none;
+	border: 1px solid color-mix(in srgb, var(--text) 18%, transparent);
+	border-radius: 0.85rem;
+	background: color-mix(in srgb, var(--glass-strong) 96%, var(--app-background));
+	box-shadow:
+		0 1rem 2.5rem color-mix(in srgb, var(--app-background) 62%, transparent),
+		inset 0 1px 0 color-mix(in srgb, var(--text) 16%, transparent);
+	backdrop-filter: blur(1.4rem) saturate(1.2);
+	animation: select-menu-in 120ms ease-out;
+}
+
+.custom-select-menu[data-placement='above'] {
+	transform: translateY(-100%);
+}
+
+.custom-select-option {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	min-height: 2.35rem;
+	gap: 0.65rem;
+	padding: 0.48rem 0.58rem;
+	border-radius: 0.62rem;
+	cursor: pointer;
+}
+
+.custom-select-option[data-active='true'] {
+	background: color-mix(in srgb, var(--accent) 16%, var(--task-card));
+}
+
+.custom-select-option[aria-selected='true'] {
+	color: var(--accent-strong);
+	font-weight: 650;
+}
+
+.custom-select-option svg {
+	color: var(--accent-strong);
+}
+
+@keyframes select-menu-in {
+	from {
+		opacity: 0;
+	}
+
+	to {
+		opacity: 1;
+	}
+}

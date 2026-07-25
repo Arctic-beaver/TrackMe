@@ -50,7 +50,6 @@ export interface PreparedTaskDraft {
 	readonly preferredStartDate: string
 	readonly projectId: string | null
 	readonly tagNames: readonly string[]
-	readonly localDate: string
 }
 
 function isLeapYear(year: number): boolean {
@@ -205,7 +204,6 @@ export function prepareTaskDraft(draft: TaskDraft): PreparedTaskDraft {
 		throw new DomainValidationError('description', 'Task description is too long.')
 	}
 	const dueDate = assertLocalDate(draft.dueDate, 'dueDate')
-	const localDate = assertLocalDate(draft.localDate, 'localDate')
 	const automaticStart = calculatePreferredStart(dueDate, draft.estimateDays)
 	let preferredStartDate = automaticStart
 	if (draft.startMode === 'manual') {
@@ -232,8 +230,7 @@ export function prepareTaskDraft(draft: TaskDraft): PreparedTaskDraft {
 		startMode: draft.startMode,
 		preferredStartDate,
 		projectId: draft.projectId,
-		tagNames: cleanedTagNames(draft.tagNames),
-		localDate
+		tagNames: cleanedTagNames(draft.tagNames)
 	})
 }
 
