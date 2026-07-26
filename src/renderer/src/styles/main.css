@@ -345,15 +345,16 @@ svg {
 
 .brand-mark {
 	display: grid;
-	width: 2rem;
+	width: 2.25rem;
 	height: 2rem;
+	flex: 0 0 auto;
 	place-items: center;
-	color: var(--on-accent);
-	border-radius: 0.75rem;
-	background: linear-gradient(145deg, var(--accent-strong), var(--accent));
-	box-shadow:
-		0 0.5rem 1.2rem color-mix(in srgb, var(--accent) 28%, transparent),
-		inset 0 1px 0 color-mix(in srgb, var(--text) 42%, transparent);
+	color: var(--text);
+}
+
+.brand-mark svg {
+	width: 2.25rem;
+	height: 2.25rem;
 }
 
 .brand-copy {

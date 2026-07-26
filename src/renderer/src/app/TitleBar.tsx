@@ -1,7 +1,8 @@
 import { useState } from 'react'
-import { Copy, Languages, Minus, Palette, Plus, Sparkles, Square, X } from 'lucide-react'
+import { Copy, Languages, Minus, Palette, Plus, Square, X } from 'lucide-react'
 import type { DesktopPlatform } from '../../../shared/contracts'
 import { useLocalization } from '../localization/useLocalization'
+import { TiempioMark } from './TiempioMark'
 
 export function TitleBar({
 	platform,
@@ -24,7 +25,7 @@ export function TitleBar({
 		<header className="title-bar">
 			<div className="brand">
 				<span className="brand-mark" aria-hidden="true">
-					<Sparkles />
+					<TiempioMark />
 				</span>
 				<span className="brand-copy">
 					<strong>{t('product.name')}</strong>

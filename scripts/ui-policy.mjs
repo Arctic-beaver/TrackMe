@@ -33,6 +33,17 @@ export function auditUiPolicy(sources) {
 	if (!/useLocalDate\s*\(/u.test(app)) {
 		failures.push('App.tsx: the Today board must use the live local-date clock')
 	}
+	const titleBar = sources.find(([path]) => path.endsWith('TitleBar.tsx'))?.[1] ?? ''
+	if (!/<TiempioMark\s*\/>/u.test(titleBar) || /\bSparkles\b/u.test(titleBar)) {
+		failures.push('TitleBar.tsx: the product brand must use the Tiempio pulse-arrow mark')
+	}
+	const tiempioMark = sources.find(([path]) => path.endsWith('TiempioMark.tsx'))?.[1] ?? ''
+	if (
+		!/M24 128H50L65 78L95 194L138 38L169 168L184 128H221/u.test(tiempioMark) ||
+		!/M208 116L221 128L208 140/u.test(tiempioMark)
+	) {
+		failures.push('TiempioMark.tsx: the product mark must preserve the approved geometry')
+	}
 	return { failures }
 }
 
@@ -49,6 +60,6 @@ if (invokedPath !== undefined && fileURLToPath(import.meta.url) === invokedPath)
 		for (const failure of failures) console.error(`FAIL ${failure}`)
 		process.exitCode = 1
 	} else {
-		console.log('PASS modal, overlay and live-date UI policy')
+		console.log('PASS modal, overlay, live-date and Tiempio brand-mark UI policy')
 	}
 }
