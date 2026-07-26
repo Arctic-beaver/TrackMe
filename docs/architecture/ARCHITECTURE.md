@@ -441,7 +441,10 @@ Repository-запросы обязаны:
 - `format:check`, ESLint и отсутствие непреднамеренного format drift;
 - отдельные typecheck для main/preload и renderer;
 - pre-commit hook запускает полный `npm run precommit`;
-- clean-checkout gate: `npm ci` и `npm run quality`;
+- pre-commit выполняет изолированный чистый `npm ci` по committed lockfile;
+- dependency audit требует `0 high / 0 critical` для production tree и
+  блокирует новые high/critical tooling advisory;
+- clean-checkout gate: `npm ci --no-audit` и `npm run quality`;
 - packaged smoke для `node:sqlite` на Windows;
 - repository contract tests на временной реальной базе;
 - atomic transaction tests;

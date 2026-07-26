@@ -15,6 +15,7 @@ import {
 } from '../shared/application/services'
 import { resolveInterfaceLocale } from '../shared/localization'
 import { appProtocolUrl } from './appAssetPath'
+import { resolveDevelopmentAppIconPath } from './appIcon'
 import { registerAppProtocol, registerAppScheme } from './appProtocol'
 import { createApplicationMenuTemplate } from './applicationMenu'
 import { openTiempioDatabase, type TiempioDatabase } from './database/database'
@@ -61,6 +62,10 @@ function nativeBackgroundColor(): string {
 	return resolvedNativeScheme() === 'dark' ? '#0b1220' : '#dce6f1'
 }
 
+function applicationIconPath(): string | undefined {
+	return resolveDevelopmentAppIconPath(app.getAppPath(), app.isPackaged)
+}
+
 function configureApplicationMenu(): void {
 	Menu.setApplicationMenu(
 		Menu.buildFromTemplate(
@@ -97,6 +102,7 @@ function createWindow(): BrowserWindow {
 		titleBarStyle: isMac ? 'hiddenInset' : 'hidden',
 		trafficLightPosition: isMac ? { x: 18, y: 17 } : undefined,
 		backgroundColor: nativeBackgroundColor(),
+		icon: applicationIconPath(),
 		webPreferences: {
 			preload: join(__dirname, '../preload/index.js'),
 			contextIsolation: true,
@@ -129,6 +135,10 @@ function createWindow(): BrowserWindow {
 
 async function startApplication(): Promise<void> {
 	app.setAppUserModelId('app.tiempio.desktop')
+	const iconPath = applicationIconPath()
+	if (process.platform === 'darwin' && iconPath !== undefined && app.dock !== undefined) {
+		app.dock.setIcon(iconPath)
+	}
 	const databasePath = await prepareTiempioDatabasePath({
 		appDataPath: app.getPath('appData'),
 		userDataPath: app.getPath('userData'),

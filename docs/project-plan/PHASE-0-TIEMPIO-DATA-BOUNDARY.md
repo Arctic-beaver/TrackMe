@@ -49,7 +49,9 @@ Repository ports возвращают `Awaitable<T>`. Поэтому desktop м�
 
 Новый знак Tiempio соединяет pulse line с небольшой стрелкой движения вперёд.
 Его мастер хранится в `build/icon.svg`; белый `build/icon.png` на прозрачном фоне
-используется Electron Builder. Цвет и возможный фон выбираются отдельно без
+используется Electron Builder. Непакетированный Electron явно передаёт тот же
+ресурс в `BrowserWindow` и macOS Dock, поэтому `npm start` не возвращается к
+стандартной иконке dev-runtime. Цвет и возможный фон выбираются отдельно без
 изменения базовой геометрии.
 Зарезервированные продуктовые домены: `tiempio.com` и `tiempio.app`.
 
@@ -93,13 +95,17 @@ lazy-loaded UX-улучшением.
 
 Фактически пройдены:
 
-- repository policy для 107 текстовых файлов;
+- repository policy для 111 текстовых файлов;
 - новый Tiempio brand audit;
+- изолированный чистый `npm ci` по committed lockfile;
+- production dependency audit: `0 high`, `0 critical`;
+- tooling audit: один рассмотренный development-only advisory без новых
+  high/critical findings;
 - Prettier и ESLint;
 - i18n, theme и UI audits;
-- 40 тестов приложения, включая application services, перенос пользовательской
-  базы и Unicode/emoji round-trip;
-- 22 policy-теста, включая два теста brand policy;
+- 42 теста приложения, включая dev icon wiring, application services, перенос
+  пользовательской базы и Unicode/emoji round-trip;
+- 26 policy-тестов, включая dependency gate и brand policy;
 - отдельные Node и Web typecheck;
 - production build main/preload/renderer;
 - renderer bundle budget и Electron security policy;

@@ -69,6 +69,8 @@ Tiempio сохраняет фактический стиль исходнико�
 ```json
 {
 	"scripts": {
+		"deps:install-check": "node scripts/dependency-gate.mjs install",
+		"deps:audit": "node scripts/dependency-gate.mjs audit",
 		"repo:audit": "node scripts/repository-policy.mjs",
 		"brand:audit": "node scripts/brand-policy.mjs",
 		"format": "prettier --write .",
@@ -76,9 +78,11 @@ Tiempio сохраняет фактический стиль исходнико�
 		"lint": "eslint --cache .",
 		"lint:fix": "eslint --cache --fix .",
 		"i18n:audit": "node scripts/i18n-policy.mjs src/renderer/src",
+		"theme:audit": "node scripts/theme-policy.mjs src/renderer/src/styles/main.css",
+		"ui:audit": "node scripts/ui-policy.mjs src/renderer/src",
 		"test": "tsc -p tsconfig.test.json && node --test --experimental-test-isolation=none \".test-out/**/*.test.js\" && npm run test:scripts",
 		"typecheck": "npm run typecheck:node && npm run typecheck:web",
-		"precommit": "npm run repo:audit && npm run brand:audit && npm run format:check && npm run lint && npm run i18n:audit && npm test && npm run typecheck",
+		"precommit": "npm run repo:audit && npm run brand:audit && npm run format:check && npm run deps:install-check && npm run deps:audit && npm run lint && npm run i18n:audit && npm run theme:audit && npm run ui:audit && npm test && npm run typecheck",
 		"quality": "npm run precommit"
 	}
 }
@@ -86,6 +90,26 @@ Tiempio сохраняет фактический стиль исходнико�
 
 `precommit` расширяется по мере появления theme, security, packaging и
 bundle-budget policies, но существующие проверки из него не удаляются.
+
+### 4.1. Целостность и аудит зависимостей
+
+`deps:install-check` создаёт временный каталог, копирует только `package.json` и
+`package-lock.json`, выполняет в нём `npm ci --ignore-scripts` и удаляет каталог.
+Так commit gate доказывает воспроизводимость чистой установки, не изменяя
+рабочий `node_modules` или lockfile.
+
+`deps:audit` разделяет две границы:
+
+- production tree обязан иметь `0 high` и `0 critical`;
+- полный tooling tree может содержать только явно рассмотренные advisory;
+- любой новый high/critical advisory блокирует commit.
+
+Текущий npm-отчёт показывает 20 high-severity узлов из-за одного
+development-only advisory `GHSA-mh99-v99m-4gvg` в `brace-expansion`. Он
+достижим через lint/packaging glob patterns, не входит в packaged Tiempio и
+зафиксирован в gate по npm source `1124334`. `npm audit fix --force` не
+применяется без отдельного анализа, потому что может заменить прямые инструменты
+на несовместимые major-версии или откаты.
 
 ## 5. ESLint и TypeScript
 
@@ -122,6 +146,9 @@ npm run quality
 
 Изменение готово к commit, когда:
 
+- `npm run deps:install-check` подтверждает чистый `npm ci`;
+- production audit содержит `0 high` и `0 critical`, а tooling audit не содержит
+  новых high/critical advisory;
 - `npm run repo:audit` проходит;
 - `npm run brand:audit` проходит;
 - `npm run format:check` проходит без автоправок;

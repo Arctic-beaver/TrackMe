@@ -8,6 +8,8 @@
 	"license": "UNLICENSED",
 	"private": true,
 	"scripts": {
+		"deps:install-check": "node scripts/dependency-gate.mjs install",
+		"deps:audit": "node scripts/dependency-gate.mjs audit",
 		"repo:audit": "node scripts/repository-policy.mjs",
 		"brand:audit": "node scripts/brand-policy.mjs",
 		"format": "prettier --write .",
@@ -23,7 +25,7 @@
 		"typecheck:web": "tsc --noEmit -p tsconfig.web.json --composite false",
 		"typecheck": "npm run typecheck:node && npm run typecheck:web",
 		"bundle:audit": "node scripts/bundle-policy.mjs out/renderer",
-		"precommit": "npm run repo:audit && npm run brand:audit && npm run format:check && npm run lint && npm run i18n:audit && npm run theme:audit && npm run ui:audit && npm test && npm run typecheck",
+		"precommit": "npm run repo:audit && npm run brand:audit && npm run format:check && npm run deps:install-check && npm run deps:audit && npm run lint && npm run i18n:audit && npm run theme:audit && npm run ui:audit && npm test && npm run typecheck",
 		"quality": "npm run precommit",
 		"ensure:electron": "install-electron --no",
 		"prestart": "npm run ensure:electron",

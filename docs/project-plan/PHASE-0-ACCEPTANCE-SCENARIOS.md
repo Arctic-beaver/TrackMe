@@ -640,3 +640,26 @@ typecheck проходят без локальных ручных настрое
 **When** срабатывает repository-managed hook  
 **Then** запускается полный `npm run precommit`  
 **And** commit не создаётся при падении любой обязательной проверки.
+
+### 17.6. Воспроизводимая установка
+
+**Given** `package.json` и `package-lock.json` находятся в change set
+
+**When** запускается `npm run deps:install-check`
+
+**Then** во временном каталоге успешно выполняется чистый `npm ci` без lifecycle scripts
+
+**And** рабочие `node_modules` и lockfile не изменяются
+
+**And** несовместимые manifest и lockfile блокируют commit.
+
+### 17.7. Граница dependency audit
+
+**Given** запускается `npm run deps:audit`
+
+**Then** production dependency tree содержит `0 high` и `0 critical`
+
+**And** любой новый high или critical tooling advisory блокирует commit
+
+**And** единственный рассмотренный development-only advisory
+`GHSA-mh99-v99m-4gvg` отслеживается явно, а не скрывается общим исключением.
