@@ -262,7 +262,7 @@ export function App({ startup }: { readonly startup: StartupState }): React.JSX.
 				</section>
 
 				<div className="filter-row">
-					<div className="filter-chip">
+					<div className="filter-chip" data-active={projectFilter !== ''}>
 						<FolderKanban aria-hidden="true" />
 						<CustomSelect
 							className="filter-select"
@@ -272,7 +272,7 @@ export function App({ startup }: { readonly startup: StartupState }): React.JSX.
 							onChange={setProjectFilter}
 						/>
 					</div>
-					<div className="filter-chip">
+					<div className="filter-chip" data-active={tagFilter !== ''}>
 						<Tag aria-hidden="true" />
 						<CustomSelect
 							className="filter-select"

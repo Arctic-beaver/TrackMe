@@ -17,8 +17,17 @@ describe('production theme policy', () => {
 		assert.equal(auditProductionThemes(productionCss).schemes.size, 8)
 	})
 
-	it('passes contrast, tray/card separation and Liquid Glass checks', () => {
+	it('passes contrast, accent distribution, tray/card separation and Liquid Glass checks', () => {
 		assert.deepEqual(auditProductionThemes(productionCss).failures, [])
+		const concentratedAccentCss = productionCss.replace(
+			".filter-chip[data-active='true']",
+			".filter-chip[data-active='removed']"
+		)
+		assert.ok(
+			auditProductionThemes(concentratedAccentCss).failures.includes(
+				'active filters must carry the theme accent'
+			)
+		)
 	})
 
 	it('rejects a card that merges into its tray', () => {

@@ -103,6 +103,35 @@ export function auditProductionThemes(css) {
 	if (!/\.empty-card[\s\S]*?var\(--task-card/u.test(css)) {
 		failures.push('task cards must use --task-card')
 	}
+	const accentContracts = [
+		[
+			'primary action must use a quiet themed accent surface',
+			/\.create-button\s*\{(?=[^}]*var\(--accent-border\))(?=[^}]*var\(--accent-surface-strong\))[^}]*\}/u
+		],
+		[
+			'active navigation must carry the theme accent',
+			/\.primary-navigation button\[aria-current='page'\]\s*\{[^}]*var\(--accent-strong\)/u
+		],
+		[
+			'active filters must carry the theme accent',
+			/\.filter-chip\[data-active='true'\]\s*\{[^}]*var\(--accent-surface-strong\)/u
+		],
+		[
+			'workflow headers must carry their column accent',
+			/\.column-title svg\s*\{[^}]*var\(--column-accent\)/u
+		],
+		[
+			'local create action must carry the theme accent',
+			/\.new-task-button\s*\{[^}]*var\(--accent-strong\)/u
+		],
+		[
+			'task tags must carry the theme accent',
+			/\.task-tags span\s*\{[^}]*var\(--accent-strong\)/u
+		]
+	]
+	for (const [failure, contract] of accentContracts) {
+		if (!contract.test(css)) failures.push(failure)
+	}
 	return { failures, schemes: parsed }
 }
 
@@ -205,7 +234,7 @@ if (invokedPath !== undefined && fileURLToPath(import.meta.url) === invokedPath)
 		process.exitCode = 1
 	} else {
 		console.log(
-			'PASS four complete light/dark themes, contrast, Liquid Glass and global scrollbar policy'
+			'PASS four complete light/dark themes, contrast, accent distribution, Liquid Glass and global scrollbar policy'
 		)
 	}
 }

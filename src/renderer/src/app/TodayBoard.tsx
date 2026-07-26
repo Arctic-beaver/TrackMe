@@ -110,6 +110,7 @@ export function TodayBoard({
 					return (
 						<section
 							className="task-column"
+							data-status={column.id}
 							data-compact-active={compactStatus === column.compactId}
 							data-drag-over={
 								draggingTask !== null && draggingTask.status !== column.id
